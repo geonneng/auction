@@ -159,11 +159,13 @@ function generateRoomId() {
 
 export async function GET(request: NextRequest) {
   try {
+    console.log("[API] GET request received")
     const { searchParams } = new URL(request.url)
     const roomId = searchParams.get('roomId')
 
     console.log("[API] GET request for roomId:", roomId)
     console.log("[API] Available rooms:", Array.from(auctionRooms.keys()))
+    console.log("[API] Request URL:", request.url)
 
     if (!roomId) {
       console.log("[API] No roomId provided")
@@ -177,7 +179,7 @@ export async function GET(request: NextRequest) {
     }
 
     const state = room.getState()
-    console.log("[API] Returning state for room:", roomId, state)
+    console.log("[API] Returning state for room:", roomId, "State:", JSON.stringify(state, null, 2))
     return NextResponse.json({ success: true, state })
   } catch (error) {
     console.error("[API] Error in GET handler:", error)

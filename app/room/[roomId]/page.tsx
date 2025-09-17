@@ -48,6 +48,7 @@ export default function GuestRoom() {
         console.log("[Guest] Poll response:", response)
         
         if (response.success) {
+          console.log("[Guest] Connection successful!")
           setIsConnected(true)
           setError("") // Clear any previous errors
           retryCount = 0 // Reset retry count on success
@@ -305,9 +306,10 @@ export default function GuestRoom() {
   if (!isConnected) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card>
+        <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="text-center space-y-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
               <div className="text-lg font-semibold">
                 {error ? "연결 상태 확인 중..." : "서버에 연결 중..."}
               </div>

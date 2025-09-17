@@ -6,83 +6,90 @@ export class AuctionAPI {
     this.baseUrl = '/api/auction'
   }
 
+  private async makeRequest(url: string, options: RequestInit, retries = 3): Promise<any> {
+    for (let i = 0; i < retries; i++) {
+      try {
+        console.log(`[API] Making request to ${url}, attempt ${i + 1}`)
+        const response = await fetch(url, {
+          ...options,
+          headers: {
+            'Content-Type': 'application/json',
+            ...options.headers,
+          }
+        })
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        
+        const data = await response.json()
+        console.log(`[API] Request successful:`, data)
+        return data
+      } catch (error) {
+        console.error(`[API] Request failed (attempt ${i + 1}):`, error)
+        if (i === retries - 1) {
+          throw error
+        }
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)))
+      }
+    }
+  }
+
   async createRoom(initialCapital: number) {
-    const response = await fetch(this.baseUrl, {
+    return this.makeRequest(this.baseUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         action: 'createRoom',
         initialCapital
       })
     })
-    return response.json()
   }
 
   async joinRoom(roomId: string, nickname: string) {
-    const response = await fetch(this.baseUrl, {
+    return this.makeRequest(this.baseUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         action: 'joinRoom',
         roomId,
         nickname
       })
     })
-    return response.json()
   }
 
   async startAuction(roomId: string) {
-    const response = await fetch(this.baseUrl, {
+    return this.makeRequest(this.baseUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         action: 'startAuction',
         roomId
       })
     })
-    return response.json()
   }
 
   async startRound(roomId: string) {
-    const response = await fetch(this.baseUrl, {
+    return this.makeRequest(this.baseUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         action: 'startRound',
         roomId
       })
     })
-    return response.json()
   }
 
   async endRound(roomId: string) {
-    const response = await fetch(this.baseUrl, {
+    return this.makeRequest(this.baseUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         action: 'endRound',
         roomId
       })
     })
-    return response.json()
   }
 
   async placeBid(roomId: string, nickname: string, amount: number) {
-    const response = await fetch(this.baseUrl, {
+    return this.makeRequest(this.baseUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         action: 'placeBid',
         roomId,
@@ -90,15 +97,11 @@ export class AuctionAPI {
         amount
       })
     })
-    return response.json()
   }
 
   async modifyCapital(roomId: string, nickname: string, newCapital: number) {
-    const response = await fetch(this.baseUrl, {
+    return this.makeRequest(this.baseUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         action: 'modifyCapital',
         roomId,
@@ -106,21 +109,12 @@ export class AuctionAPI {
         newCapital
       })
     })
-    return response.json()
   }
 
   async getState(roomId: string) {
-    const response = await fetch(this.baseUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        action: 'getState',
-        roomId
-      })
+    return this.makeRequest(`${this.baseUrl}?roomId=${roomId}`, {
+      method: 'GET'
     })
-    return response.json()
   }
 }
 
