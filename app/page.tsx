@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import SocketManager from "@/lib/socket"
+import { auctionAPI } from "@/lib/api"
 import type { HostData } from "@/types/auction"
 import { toast } from "@/hooks/use-toast"
 
@@ -24,45 +24,9 @@ export default function HomePage() {
   const [initialCapital, setInitialCapital] = useState("10000")
   const [isCreating, setIsCreating] = useState(false)
 
-  useEffect(() => {
-    const socketManager = SocketManager.getInstance()
-    const socket = socketManager.connect()
+  // No need for useEffect with socket connections anymore
 
-    socket.on("host:created", (data: HostData) => {
-      console.log("[v0] Room created, redirecting to:", data.roomId)
-      setIsCreating(false)
-      setIsCreateModalOpen(false)
-      router.push(`/host/${data.roomId}`)
-    })
-
-    socket.on("app:error", (error) => {
-      console.error("[v0] Socket error:", error)
-      setIsCreating(false)
-      const message = (error && (error.message || error.error || error.reason))
-        || (typeof error === "string" ? error : "알 수 없는 오류가 발생했습니다")
-      toast({
-        title: "오류",
-        description: message,
-        variant: "destructive",
-      })
-    })
-
-    return () => {
-      // Don't disconnect here as we need the connection for the host dashboard
-    }
-  }, [router])
-
-  const handleCreateAuction = () => {
-    const socket = SocketManager.getInstance().getSocket()
-    if (!socket) {
-      toast({
-        title: "연결 오류",
-        description: "서버에 연결할 수 없습니다.",
-        variant: "destructive",
-      })
-      return
-    }
-
+  const handleCreateAuction = async () => {
     const capital = Number.parseInt(initialCapital)
     if (isNaN(capital) || capital <= 0) {
       toast({
@@ -74,28 +38,30 @@ export default function HomePage() {
     }
 
     setIsCreating(true)
-    if (socket.connected) {
-      socket.emit("host:create", { initialCapital: capital })
-    } else {
-      // 연결이 되면 한 번만 시도
-      const onConnect = () => {
-        socket.off("connect", onConnect)
-        socket.emit("host:create", { initialCapital: capital })
+    
+    try {
+      const response = await auctionAPI.createRoom(capital)
+      if (response.success) {
+        console.log("[v0] Room created, redirecting to:", response.roomId)
+        setIsCreating(false)
+        setIsCreateModalOpen(false)
+        router.push(`/host/${response.roomId}`)
+      } else {
+        toast({
+          title: "오류",
+          description: response.error || "경매 생성에 실패했습니다.",
+          variant: "destructive",
+        })
+        setIsCreating(false)
       }
-      socket.on("connect", onConnect)
-
-      // 일정 시간 내 미연결 시 사용자에게 알림
-      setTimeout(() => {
-        if (!socket.connected) {
-          setIsCreating(false)
-          socket.off("connect", onConnect)
-          toast({
-            title: "연결 대기 시간 초과",
-            description: "잠시 후 다시 시도해주세요.",
-            variant: "destructive",
-          })
-        }
-      }, 5000)
+    } catch (error) {
+      console.error("Failed to create auction:", error)
+      toast({
+        title: "연결 오류",
+        description: "서버에 연결할 수 없습니다.",
+        variant: "destructive",
+      })
+      setIsCreating(false)
     }
   }
 

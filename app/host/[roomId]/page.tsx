@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Copy, Users, Clock, TrendingUp, QrCode } from "lucide-react"
-import SocketManager from "@/lib/socket"
+import { auctionAPI } from "@/lib/api"
 import type { AuctionState, Bid, HostData, RoundResults } from "@/types/auction"
 import { toast } from "@/hooks/use-toast"
 import QRCodeComponent from "@/components/qr-code"
@@ -28,110 +28,137 @@ export default function HostDashboard() {
   const [newCapital, setNewCapital] = useState("")
 
   useEffect(() => {
-    const socketManager = SocketManager.getInstance()
-    const socket = socketManager.connect()
-
-    socket.on("connect", () => {
-      setIsConnected(true)
-      console.log("[v0] Host connected, requesting room state for:", roomId)
-      // Only request state if we don't already have it (for refresh/deep link cases)
-      if (roomId && !auctionState) {
-        socket.emit("host:requestState", { roomId })
-      }
-    })
-
-    socket.on("disconnect", () => {
-      setIsConnected(false)
-    })
-
-    socket.on("host:created", (data: HostData) => {
-      console.log("[v0] Host room created:", data)
-      setAuctionState(data.state)
-      setJoinUrl(data.joinUrl)
-    })
-
-    socket.on("host:stateUpdate", (state: AuctionState) => {
-      console.log("[v0] Host state updated:", state)
-      console.log("[v0] Guests in state:", state.guests.map(g => `${g.nickname}: ${g.capital}`))
-      setAuctionState(state)
-    })
-
-    socket.on("host:newBid", (bid: Bid) => {
-      console.log("[v0] New bid received:", bid)
-      setRecentBids((prev) => [bid, ...prev.slice(0, 19)]) // Keep last 20 bids
-      toast({
-        title: "새로운 입찰",
-        description: `${bid.nickname}님이 입찰했습니다.`,
-      })
-    })
-
-    socket.on("host:roundResults", (results: RoundResults) => {
-      console.log("[v0] Round results received:", results)
-      setRoundResults(results)
-      if (results.winner) {
+    // Load room state on mount
+    const loadRoomState = async () => {
+      try {
+        const response = await auctionAPI.getState(roomId)
+        if (response.success) {
+          setAuctionState(response.state)
+          setJoinUrl(`${window.location.origin}/room/${roomId}`)
+          setIsConnected(true)
+        } else {
+          toast({
+            title: "오류",
+            description: response.error || "방을 찾을 수 없습니다.",
+            variant: "destructive",
+          })
+          setTimeout(() => {
+            router.push("/")
+          }, 800)
+        }
+      } catch (error) {
+        console.error("Failed to load room state:", error)
         toast({
-          title: "라운드 종료",
-          description: `라운드 ${results.round} 종료! 최고 입찰자: ${results.winner.nickname} (${results.winner.amount?.toLocaleString()}원)`,
-        })
-      } else {
-        toast({
-          title: "라운드 종료",
-          description: `라운드 ${results.round} 종료! 입찰자가 없었습니다.`,
+          title: "연결 오류",
+          description: "서버에 연결할 수 없습니다.",
+          variant: "destructive",
         })
       }
-    })
+    }
 
-    socket.on("app:error", (error) => {
-      console.error("[v0] Socket error:", error)
-      toast({
-        title: "오류",
-        description: error.message,
-        variant: "destructive",
-      })
-      if (error?.message === "존재하지 않는 방입니다") {
-        // 안내 후 홈으로 이동
-        setTimeout(() => {
-          router.push("/")
-        }, 800)
-      }
-    })
+    loadRoomState()
 
-    socket.on("host:capitalModified", (data: { nickname: string; oldCapital: number; newCapital: number; difference: number }) => {
-      console.log("[v0] Capital modified successfully:", data)
-      const changeText = data.difference > 0 ? `+${data.difference.toLocaleString()}원` : `${data.difference.toLocaleString()}원`
-      toast({
-        title: "자본금 수정 완료",
-        description: `${data.nickname}님의 자본금이 ${changeText} 변경되었습니다.`,
-      })
-    })
+    // Poll for updates every 2 seconds
+    const interval = setInterval(loadRoomState, 2000)
 
     return () => {
-      socketManager.disconnect()
+      clearInterval(interval)
     }
   }, [roomId])
 
-  const handleStartAuction = () => {
-    const socket = SocketManager.getInstance().getSocket()
-    if (socket && auctionState) {
-      socket.emit("host:startAuction", { roomId: auctionState.id })
+  const handleStartAuction = async () => {
+    if (!auctionState) return
+    
+    try {
+      const response = await auctionAPI.startAuction(auctionState.id)
+      if (response.success) {
+        setAuctionState(response.state)
+        toast({
+          title: "경매 시작",
+          description: "경매가 시작되었습니다!",
+        })
+      } else {
+        toast({
+          title: "오류",
+          description: response.error || "경매 시작에 실패했습니다.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Failed to start auction:", error)
+      toast({
+        title: "연결 오류",
+        description: "서버에 연결할 수 없습니다.",
+        variant: "destructive",
+      })
     }
   }
 
-  const handleStartRound = () => {
-    const socket = SocketManager.getInstance().getSocket()
-    if (socket && auctionState) {
+  const handleStartRound = async () => {
+    if (!auctionState) return
+    
+    try {
       console.log("[v0] Starting round for room:", auctionState.id)
       setRoundResults(null) // Clear previous round results
-      socket.emit("host:startRound", { roomId: auctionState.id })
-    } else {
-      console.log("[v0] Cannot start round - socket or auctionState missing")
+      
+      const response = await auctionAPI.startRound(auctionState.id)
+      if (response.success) {
+        setAuctionState(response.state)
+        toast({
+          title: "라운드 시작",
+          description: `라운드 ${response.round}가 시작되었습니다!`,
+        })
+      } else {
+        toast({
+          title: "오류",
+          description: response.error || "라운드 시작에 실패했습니다.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Failed to start round:", error)
+      toast({
+        title: "연결 오류",
+        description: "서버에 연결할 수 없습니다.",
+        variant: "destructive",
+      })
     }
   }
 
-  const handleEndRound = () => {
-    const socket = SocketManager.getInstance().getSocket()
-    if (socket && auctionState) {
-      socket.emit("host:endRound", { roomId: auctionState.id })
+  const handleEndRound = async () => {
+    if (!auctionState) return
+    
+    try {
+      const response = await auctionAPI.endRound(auctionState.id)
+      if (response.success) {
+        setAuctionState(response.state)
+        setRoundResults(response.roundResults)
+        
+        if (response.roundResults.winner) {
+          toast({
+            title: "라운드 종료",
+            description: `라운드 ${response.roundResults.round} 종료! 최고 입찰자: ${response.roundResults.winner.nickname} (${response.roundResults.winner.amount?.toLocaleString()}원)`,
+          })
+        } else {
+          toast({
+            title: "라운드 종료",
+            description: `라운드 ${response.roundResults.round} 종료! 입찰자가 없었습니다.`,
+          })
+        }
+      } else {
+        toast({
+          title: "오류",
+          description: response.error || "라운드 종료에 실패했습니다.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Failed to end round:", error)
+      toast({
+        title: "연결 오류",
+        description: "서버에 연결할 수 없습니다.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -152,7 +179,7 @@ export default function HostDashboard() {
     setNewCapital(currentCapital.toString())
   }
 
-  const handleSaveCapital = () => {
+  const handleSaveCapital = async () => {
     if (!editingGuest || !auctionState) return
 
     const amount = Number.parseInt(newCapital)
@@ -167,17 +194,26 @@ export default function HostDashboard() {
 
     console.log(`[v0] Modifying capital for ${editingGuest}: ${amount}`)
     
-    const socket = SocketManager.getInstance().getSocket()
-    if (socket) {
-      socket.emit("host:modifyCapital", {
-        roomId: auctionState.id,
-        nickname: editingGuest,
-        newCapital: amount,
-      })
-      setEditingGuest(null)
-      setNewCapital("")
-    } else {
-      console.error("[v0] Socket not available")
+    try {
+      const response = await auctionAPI.modifyCapital(auctionState.id, editingGuest, amount)
+      if (response.success) {
+        setAuctionState(response.state)
+        const changeText = response.result.difference > 0 ? `+${response.result.difference.toLocaleString()}원` : `${response.result.difference.toLocaleString()}원`
+        toast({
+          title: "자본금 수정 완료",
+          description: `${editingGuest}님의 자본금이 ${changeText} 변경되었습니다.`,
+        })
+        setEditingGuest(null)
+        setNewCapital("")
+      } else {
+        toast({
+          title: "오류",
+          description: response.error || "자본금 수정에 실패했습니다.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Failed to modify capital:", error)
       toast({
         title: "연결 오류",
         description: "서버에 연결할 수 없습니다.",
