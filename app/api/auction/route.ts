@@ -158,26 +158,31 @@ function generateRoomId() {
 }
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const roomId = searchParams.get('roomId')
+  try {
+    const { searchParams } = new URL(request.url)
+    const roomId = searchParams.get('roomId')
 
-  console.log("[API] GET request for roomId:", roomId)
-  console.log("[API] Available rooms:", Array.from(auctionRooms.keys()))
+    console.log("[API] GET request for roomId:", roomId)
+    console.log("[API] Available rooms:", Array.from(auctionRooms.keys()))
 
-  if (!roomId) {
-    console.log("[API] No roomId provided")
-    return NextResponse.json({ success: false, error: "Room ID is required" }, { status: 400 })
+    if (!roomId) {
+      console.log("[API] No roomId provided")
+      return NextResponse.json({ success: false, error: "Room ID is required" }, { status: 400 })
+    }
+
+    const room = auctionRooms.get(roomId)
+    if (!room) {
+      console.log("[API] Room not found:", roomId)
+      return NextResponse.json({ success: false, error: "Room not found" }, { status: 404 })
+    }
+
+    const state = room.getState()
+    console.log("[API] Returning state for room:", roomId, state)
+    return NextResponse.json({ success: true, state })
+  } catch (error) {
+    console.error("[API] Error in GET handler:", error)
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
-
-  const room = auctionRooms.get(roomId)
-  if (!room) {
-    console.log("[API] Room not found:", roomId)
-    return NextResponse.json({ success: false, error: "Room not found" }, { status: 404 })
-  }
-
-  const state = room.getState()
-  console.log("[API] Returning state for room:", roomId, state)
-  return NextResponse.json({ success: true, state })
 }
 
 export async function POST(request: NextRequest) {

@@ -35,7 +35,9 @@ export default function GuestRoom() {
     let previousState: any = null
     let isPolling = true
     let retryCount = 0
-    const maxRetries = 5
+    let consecutiveErrors = 0
+    const maxRetries = 10 // Increased retry count
+    const maxConsecutiveErrors = 5 // Allow more consecutive errors
 
     const checkRoomAndPoll = async () => {
       if (!isPolling) return
@@ -49,6 +51,7 @@ export default function GuestRoom() {
           setIsConnected(true)
           setError("") // Clear any previous errors
           retryCount = 0 // Reset retry count on success
+          consecutiveErrors = 0 // Reset consecutive error count
           
           // If guest is already joined, update their data
           if (guestData) {
@@ -125,34 +128,37 @@ export default function GuestRoom() {
             } else {
               console.log("[Guest] Guest not found in room, might have been removed")
               // Guest was removed from room - but don't immediately disconnect
-              // Wait for a few more polls to confirm
-              retryCount++
-              if (retryCount >= 3) {
-                setError("방에서 제거되었습니다.")
-                setIsConnected(false)
+              // Wait for many more polls to confirm
+              consecutiveErrors++
+              if (consecutiveErrors >= 10) { // Increased threshold
+                console.log("[Guest] Guest consistently not found, but not disconnecting")
+                // Don't disconnect, just show warning
+                setError("연결 상태를 확인하는 중...")
               }
             }
           }
         } else {
           console.log("[Guest] Room not found or error:", response.error)
+          consecutiveErrors++
           retryCount++
-          if (retryCount >= maxRetries) {
-            setIsConnected(false)
-            setError(response.error || "존재하지 않는 방입니다.")
-          } else {
-            console.log("[Guest] Retrying... attempt", retryCount)
+          
+          // Only show error after many consecutive failures
+          if (consecutiveErrors >= maxConsecutiveErrors) {
+            console.log("[Guest] Many consecutive errors, but not disconnecting")
+            setError("연결 상태를 확인하는 중...")
           }
+          
+          // Never disconnect due to room not found - keep trying
+          console.log("[Guest] Room error, but continuing to poll... attempt", retryCount)
         }
       } catch (error) {
         console.error("[Guest] Failed to check room:", error)
+        consecutiveErrors++
         retryCount++
-        if (retryCount >= maxRetries) {
-          console.log("[Guest] Max retries reached, stopping poll")
-          setIsConnected(false)
-          setError("서버에 연결할 수 없습니다.")
-        } else {
-          console.log("[Guest] Network error, retrying... attempt", retryCount)
-        }
+        
+        // Never disconnect due to network errors - keep trying
+        console.log("[Guest] Network error, but continuing to poll... attempt", retryCount)
+        setError("연결 상태를 확인하는 중...")
       }
     }
 
@@ -301,20 +307,37 @@ export default function GuestRoom() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card>
           <CardContent className="pt-6">
-            <div className="text-center">
-              {error ? (
-                <div className="space-y-4">
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                  <Button onClick={() => window.location.reload()}>
-                    다시 시도
-                  </Button>
-                </div>
-              ) : (
-                "서버에 연결 중..."
+            <div className="text-center space-y-4">
+              <div className="text-lg font-semibold">
+                {error ? "연결 상태 확인 중..." : "서버에 연결 중..."}
+              </div>
+              {error && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
+              <div className="text-sm text-muted-foreground">
+                잠시만 기다려주세요. 자동으로 재연결을 시도합니다.
+              </div>
+              <div className="flex justify-center space-x-2">
+                <Button 
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                  size="sm"
+                >
+                  새로고침
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setError("")
+                    setIsConnected(true)
+                  }}
+                  size="sm"
+                >
+                  계속 진행
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -482,18 +505,18 @@ export default function GuestRoom() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5" />
-                  라운드 {roundResults.round} 결과
+                  라운드 {roundResults.round} 결과 공개
                 </CardTitle>
-                <CardDescription>라운드 종료 후 입찰 결과가 공개됩니다</CardDescription>
+                <CardDescription>모든 입찰 금액이 공개되었습니다</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {roundResults.winner ? (
-                    <Alert>
+                    <Alert className="border-green-200 bg-green-50">
                       <AlertDescription className="text-center">
-                        <div className="text-2xl font-bold text-primary mb-2">🏆 최고 입찰자</div>
+                        <div className="text-2xl font-bold text-green-600 mb-2">🏆 낙찰자</div>
                         <div className="text-xl font-semibold">{roundResults.winner.nickname}</div>
-                        <div className="text-lg text-muted-foreground">
+                        <div className="text-lg text-green-600">
                           {roundResults.winner.amount?.toLocaleString()}원
                         </div>
                       </AlertDescription>
@@ -507,15 +530,22 @@ export default function GuestRoom() {
                   )}
                   
                   <div className="space-y-2">
-                    <h4 className="font-semibold text-lg">전체 입찰 내역</h4>
+                    <h4 className="font-semibold text-lg">전체 입찰 내역 (금액 공개)</h4>
                     {roundResults.bids.map((bid, index) => (
                       <Alert key={`${bid.nickname}-${bid.timestamp}-${index}`} className="py-3">
                         <AlertDescription className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-lg">{bid.nickname}</span>
                             {index === 0 && <Badge variant="default">1위</Badge>}
+                            {index === 1 && <Badge variant="secondary">2위</Badge>}
+                            {index === 2 && <Badge variant="outline">3위</Badge>}
                           </div>
-                          <span className="font-mono font-bold text-lg">{bid.amount?.toLocaleString()}원</span>
+                          <div className="text-right">
+                            <div className="font-mono font-bold text-lg">{bid.amount?.toLocaleString()}원</div>
+                            <div className="text-xs text-muted-foreground">
+                              {new Date(bid.timestamp).toLocaleTimeString()}
+                            </div>
+                          </div>
                         </AlertDescription>
                       </Alert>
                     ))}
