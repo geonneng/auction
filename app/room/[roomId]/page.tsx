@@ -30,13 +30,80 @@ export default function GuestRoom() {
   const [roundResults, setRoundResults] = useState<RoundResults | null>(null)
   const [canBid, setCanBid] = useState(true)
 
-  // Check if room exists on mount
+  // Check if room exists on mount and poll for updates
   useEffect(() => {
-    const checkRoomExists = async () => {
+    let previousState: any = null
+
+    const checkRoomAndPoll = async () => {
       try {
         const response = await auctionAPI.getState(roomId)
         if (response.success) {
           setIsConnected(true)
+          
+          // If guest is already joined, update their data
+          if (guestData) {
+            const currentGuest = response.state.guests.find(g => g.nickname === guestData.nickname)
+            if (currentGuest) {
+              const newGuestData = {
+                ...guestData,
+                capital: currentGuest.capital,
+                status: response.state.status,
+                currentRound: response.state.currentRound,
+                roundStatus: response.state.roundStatus,
+                hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
+              }
+              
+              setGuestData(newGuestData)
+              setCanBid(!currentGuest.hasBidInCurrentRound)
+              
+              // Check for state changes and show notifications
+              if (previousState) {
+                // Auction started
+                if (previousState.status === "PRE-START" && response.state.status === "ACTIVE") {
+                  toast({
+                    title: "경매 시작",
+                    description: "경매가 시작되었습니다! 호스트가 라운드를 시작하면 입찰할 수 있습니다.",
+                  })
+                }
+                
+                // Round started
+                if (previousState.currentRound < response.state.currentRound && response.state.roundStatus === "ACTIVE") {
+                  toast({
+                    title: "라운드 시작",
+                    description: `라운드 ${response.state.currentRound}이 시작되었습니다! 이제 입찰할 수 있습니다.`,
+                  })
+                  setRoundResults(null) // Clear previous round results
+                }
+                
+                // Round ended
+                if (previousState.roundStatus === "ACTIVE" && response.state.roundStatus === "ENDED") {
+                  // Get round results from the latest bids
+                  const roundBids = response.state.bids.filter((bid: any) => bid.round === response.state.currentRound)
+                  const roundResults = {
+                    round: response.state.currentRound,
+                    bids: roundBids.sort((a: any, b: any) => b.amount - a.amount),
+                    winner: roundBids.length > 0 ? roundBids.reduce((max: any, bid: any) => bid.amount > max.amount ? bid : max) : null
+                  }
+                  
+                  setRoundResults(roundResults)
+                  
+                  if (roundResults.winner) {
+                    toast({
+                      title: "라운드 종료",
+                      description: `라운드 ${response.state.currentRound} 종료! 최고 입찰자: ${roundResults.winner.nickname} (${roundResults.winner.amount?.toLocaleString()}원)`,
+                    })
+                  } else {
+                    toast({
+                      title: "라운드 종료",
+                      description: `라운드 ${response.state.currentRound} 종료! 입찰자가 없었습니다.`,
+                    })
+                  }
+                }
+              }
+              
+              previousState = response.state
+            }
+          }
         } else {
           setIsConnected(false)
           setError("존재하지 않는 방입니다.")
@@ -48,38 +115,11 @@ export default function GuestRoom() {
       }
     }
 
-    checkRoomExists()
-  }, [roomId])
-
-  // Poll for room state updates (only after guest joins)
-  useEffect(() => {
-    if (!guestData) return
-
-    const pollRoomState = async () => {
-      try {
-        const response = await auctionAPI.getState(roomId)
-        if (response.success) {
-          // Update guest data based on current state
-          const currentGuest = response.state.guests.find(g => g.nickname === guestData.nickname)
-          if (currentGuest) {
-            setGuestData(prev => ({
-              ...prev!,
-              capital: currentGuest.capital,
-              status: response.state.status,
-              currentRound: response.state.currentRound,
-              roundStatus: response.state.roundStatus,
-              hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
-            }))
-            setCanBid(!currentGuest.hasBidInCurrentRound)
-          }
-        }
-      } catch (error) {
-        console.error("Failed to poll room state:", error)
-      }
-    }
-
+    // Initial check
+    checkRoomAndPoll()
+    
     // Poll every 2 seconds
-    const interval = setInterval(pollRoomState, 2000)
+    const interval = setInterval(checkRoomAndPoll, 2000)
 
     return () => {
       clearInterval(interval)
