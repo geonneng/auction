@@ -43,6 +43,11 @@ export default function HostDashboard() {
           setAuctionState(response.state)
           setJoinUrl(`${window.location.origin}/room/${roomId}`)
           setIsConnected(true)
+          
+          // Update recent bids from the state
+          if (response.state.bids && response.state.bids.length > 0) {
+            setRecentBids(response.state.bids.slice(-20)) // Keep last 20 bids
+          }
         } else {
           console.log("[Host] Room not found or error:", response.error)
           toast({
@@ -454,29 +459,39 @@ export default function HostDashboard() {
                   </div>
                 ) : auctionState?.roundStatus === "ACTIVE" ? (
                   // Show only current round bids during active round
-                  recentBids.filter(bid => bid.round === auctionState.currentRound).length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      아직 입찰이 없습니다.
-                    </div>
-                  ) : (
-                    recentBids
-                      .filter(bid => bid.round === auctionState.currentRound)
-                      .map((bid, index) => (
-                        <Alert key={`${bid.nickname}-${bid.timestamp}-${index}`} className="py-3">
-                          <AlertDescription className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-lg">{bid.nickname}</span>
-                              <span className="text-sm text-muted-foreground">
-                                라운드 {bid.round}
-                              </span>
-                            </div>
-                            <span className="text-sm text-muted-foreground">
-                              {new Date(bid.timestamp).toLocaleTimeString()}
-                            </span>
-                          </AlertDescription>
-                        </Alert>
-                      ))
-                  )
+                  (() => {
+                    const currentRoundBids = recentBids.filter(bid => bid.round === auctionState.currentRound)
+                    const sortedBids = currentRoundBids.sort((a, b) => b.amount - a.amount)
+                    
+                    return sortedBids.length === 0 ? (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <div className="text-lg mb-2">아직 입찰이 없습니다.</div>
+                        <div className="text-sm">게스트들이 입찰하면 여기에 표시됩니다.</div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="text-sm text-muted-foreground mb-3">
+                          라운드 {auctionState.currentRound} 입찰 현황 ({sortedBids.length}건)
+                        </div>
+                        {sortedBids.map((bid, index) => (
+                          <Alert key={`${bid.nickname}-${bid.timestamp}-${index}`} className="py-3">
+                            <AlertDescription className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-lg">{bid.nickname}</span>
+                                {index === 0 && <Badge variant="default">최고가</Badge>}
+                              </div>
+                              <div className="text-right">
+                                <div className="font-mono font-bold text-lg">{bid.amount?.toLocaleString()}원</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {new Date(bid.timestamp).toLocaleTimeString()}
+                                </div>
+                              </div>
+                            </AlertDescription>
+                          </Alert>
+                        ))}
+                      </div>
+                    )
+                  })()
                 ) : (
                   <div className="text-center py-12 text-muted-foreground">
                     {auctionState?.status === "PRE-START"

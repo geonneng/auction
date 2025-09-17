@@ -34,6 +34,8 @@ export default function GuestRoom() {
   useEffect(() => {
     let previousState: any = null
     let isPolling = true
+    let retryCount = 0
+    const maxRetries = 5
 
     const checkRoomAndPoll = async () => {
       if (!isPolling) return
@@ -46,6 +48,7 @@ export default function GuestRoom() {
         if (response.success) {
           setIsConnected(true)
           setError("") // Clear any previous errors
+          retryCount = 0 // Reset retry count on success
           
           // If guest is already joined, update their data
           if (guestData) {
@@ -121,20 +124,35 @@ export default function GuestRoom() {
               previousState = response.state
             } else {
               console.log("[Guest] Guest not found in room, might have been removed")
-              // Guest was removed from room
-              setError("방에서 제거되었습니다.")
-              setIsConnected(false)
+              // Guest was removed from room - but don't immediately disconnect
+              // Wait for a few more polls to confirm
+              retryCount++
+              if (retryCount >= 3) {
+                setError("방에서 제거되었습니다.")
+                setIsConnected(false)
+              }
             }
           }
         } else {
           console.log("[Guest] Room not found or error:", response.error)
-          setIsConnected(false)
-          setError(response.error || "존재하지 않는 방입니다.")
+          retryCount++
+          if (retryCount >= maxRetries) {
+            setIsConnected(false)
+            setError(response.error || "존재하지 않는 방입니다.")
+          } else {
+            console.log("[Guest] Retrying... attempt", retryCount)
+          }
         }
       } catch (error) {
         console.error("[Guest] Failed to check room:", error)
-        // Don't immediately disconnect on network errors, just log them
-        console.log("[Guest] Network error, continuing to poll...")
+        retryCount++
+        if (retryCount >= maxRetries) {
+          console.log("[Guest] Max retries reached, stopping poll")
+          setIsConnected(false)
+          setError("서버에 연결할 수 없습니다.")
+        } else {
+          console.log("[Guest] Network error, retrying... attempt", retryCount)
+        }
       }
     }
 
@@ -227,13 +245,30 @@ export default function GuestRoom() {
       console.log("[Guest] Bid response:", response)
       
       if (response.success) {
-        // Update guest data immediately
-        setGuestData((prev) => (prev ? { 
-          ...prev, 
-          capital: response.remainingCapital,
-          hasBidInCurrentRound: response.hasBidInCurrentRound
-        } : null))
-        setCanBid(!response.hasBidInCurrentRound)
+        // Update guest data immediately with full state
+        if (response.state) {
+          const currentGuest = response.state.guests.find(g => g.nickname === guestData.nickname)
+          if (currentGuest) {
+            setGuestData((prev) => (prev ? { 
+              ...prev, 
+              capital: currentGuest.capital,
+              status: response.state.status,
+              currentRound: response.state.currentRound,
+              roundStatus: response.state.roundStatus,
+              hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
+            } : null))
+            setCanBid(!currentGuest.hasBidInCurrentRound)
+          }
+        } else {
+          // Fallback to simple update
+          setGuestData((prev) => (prev ? { 
+            ...prev, 
+            capital: response.remainingCapital,
+            hasBidInCurrentRound: response.hasBidInCurrentRound
+          } : null))
+          setCanBid(!response.hasBidInCurrentRound)
+        }
+        
         setBidAmount("")
         
         console.log("[Guest] Bid successful, updated guest data")
