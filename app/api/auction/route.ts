@@ -157,6 +157,22 @@ function generateRoomId() {
   return Math.random().toString(36).substring(2, 8).toUpperCase()
 }
 
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const roomId = searchParams.get('roomId')
+
+  if (!roomId) {
+    return NextResponse.json({ success: false, error: "Room ID is required" }, { status: 400 })
+  }
+
+  const room = auctionRooms.get(roomId)
+  if (!room) {
+    return NextResponse.json({ success: false, error: "Room not found" }, { status: 404 })
+  }
+
+  return NextResponse.json({ success: true, state: room.getState() })
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { action, ...data } = await request.json()

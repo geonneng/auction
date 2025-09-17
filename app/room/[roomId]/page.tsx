@@ -30,7 +30,28 @@ export default function GuestRoom() {
   const [roundResults, setRoundResults] = useState<RoundResults | null>(null)
   const [canBid, setCanBid] = useState(true)
 
-  // Poll for room state updates
+  // Check if room exists on mount
+  useEffect(() => {
+    const checkRoomExists = async () => {
+      try {
+        const response = await auctionAPI.getState(roomId)
+        if (response.success) {
+          setIsConnected(true)
+        } else {
+          setIsConnected(false)
+          setError("존재하지 않는 방입니다.")
+        }
+      } catch (error) {
+        console.error("Failed to check room:", error)
+        setIsConnected(false)
+        setError("서버에 연결할 수 없습니다.")
+      }
+    }
+
+    checkRoomExists()
+  }, [roomId])
+
+  // Poll for room state updates (only after guest joins)
   useEffect(() => {
     if (!guestData) return
 
@@ -64,11 +85,6 @@ export default function GuestRoom() {
       clearInterval(interval)
     }
   }, [roomId, guestData?.nickname])
-
-  // Set connected state when guest data is available
-  useEffect(() => {
-    setIsConnected(!!guestData)
-  }, [guestData])
 
   const handleJoinRoom = async () => {
     if (!nickname.trim()) {
@@ -175,7 +191,21 @@ export default function GuestRoom() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card>
           <CardContent className="pt-6">
-            <div className="text-center">서버에 연결 중...</div>
+            <div className="text-center">
+              {error ? (
+                <div className="space-y-4">
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                  <Button onClick={() => window.location.reload()}>
+                    다시 시도
+                  </Button>
+                </div>
+              ) : (
+                "서버에 연결 중..."
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
