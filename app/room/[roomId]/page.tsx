@@ -143,6 +143,20 @@ export default function GuestRoom() {
           consecutiveErrors++
           retryCount++
           
+          // If room not found, redirect to home after some attempts
+          if (response.error === "Room not found" && consecutiveErrors >= 5) {
+            console.log("[Guest] Room not found, redirecting to home")
+            toast({
+              title: "방을 찾을 수 없습니다",
+              description: "존재하지 않는 방입니다. 홈으로 이동합니다.",
+              variant: "destructive",
+            })
+            setTimeout(() => {
+              router.push("/")
+            }, 2000)
+            return
+          }
+          
           // Only show error after many consecutive failures
           if (consecutiveErrors >= maxConsecutiveErrors) {
             console.log("[Guest] Many consecutive errors, but not disconnecting")

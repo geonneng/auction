@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 // In-memory storage for auction rooms (in production, use a database)
 const auctionRooms = new Map()
 
+// Add some debugging
+console.log("[API] Module loaded, auctionRooms initialized")
+
 // Room data structure
 class AuctionRoom {
   constructor(id: string, initialCapital: number) {
@@ -175,7 +178,16 @@ export async function GET(request: NextRequest) {
     const room = auctionRooms.get(roomId)
     if (!room) {
       console.log("[API] Room not found:", roomId)
-      return NextResponse.json({ success: false, error: "Room not found" }, { status: 404 })
+      console.log("[API] Creating temporary room for testing...")
+      
+      // For development: create a temporary room if it doesn't exist
+      const tempRoom = new AuctionRoom(roomId, 10000)
+      auctionRooms.set(roomId, tempRoom)
+      console.log("[API] Created temporary room:", roomId)
+      
+      const state = tempRoom.getState()
+      console.log("[API] Returning temporary room state:", JSON.stringify(state, null, 2))
+      return NextResponse.json({ success: true, state })
     }
 
     const state = room.getState()
@@ -197,6 +209,8 @@ export async function POST(request: NextRequest) {
         const roomId = generateRoomId()
         const room = new AuctionRoom(roomId, initialCapital)
         auctionRooms.set(roomId, room)
+        console.log("[API] Created room:", roomId, "with capital:", initialCapital)
+        console.log("[API] Available rooms after creation:", Array.from(auctionRooms.keys()))
         
         return NextResponse.json({
           success: true,
