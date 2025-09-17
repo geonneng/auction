@@ -33,16 +33,25 @@ export default function GuestRoom() {
   // Check if room exists on mount and poll for updates
   useEffect(() => {
     let previousState: any = null
+    let isPolling = true
 
     const checkRoomAndPoll = async () => {
+      if (!isPolling) return
+      
       try {
+        console.log("[Guest] Polling room state for roomId:", roomId)
         const response = await auctionAPI.getState(roomId)
+        console.log("[Guest] Poll response:", response)
+        
         if (response.success) {
           setIsConnected(true)
+          setError("") // Clear any previous errors
           
           // If guest is already joined, update their data
           if (guestData) {
             const currentGuest = response.state.guests.find(g => g.nickname === guestData.nickname)
+            console.log("[Guest] Current guest found:", currentGuest)
+            
             if (currentGuest) {
               const newGuestData = {
                 ...guestData,
@@ -53,13 +62,18 @@ export default function GuestRoom() {
                 hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
               }
               
+              console.log("[Guest] Updating guest data:", newGuestData)
               setGuestData(newGuestData)
               setCanBid(!currentGuest.hasBidInCurrentRound)
               
               // Check for state changes and show notifications
               if (previousState) {
+                console.log("[Guest] Previous state:", previousState)
+                console.log("[Guest] Current state:", response.state)
+                
                 // Auction started
                 if (previousState.status === "PRE-START" && response.state.status === "ACTIVE") {
+                  console.log("[Guest] Auction started!")
                   toast({
                     title: "경매 시작",
                     description: "경매가 시작되었습니다! 호스트가 라운드를 시작하면 입찰할 수 있습니다.",
@@ -68,6 +82,7 @@ export default function GuestRoom() {
                 
                 // Round started
                 if (previousState.currentRound < response.state.currentRound && response.state.roundStatus === "ACTIVE") {
+                  console.log("[Guest] Round started!")
                   toast({
                     title: "라운드 시작",
                     description: `라운드 ${response.state.currentRound}이 시작되었습니다! 이제 입찰할 수 있습니다.`,
@@ -77,6 +92,7 @@ export default function GuestRoom() {
                 
                 // Round ended
                 if (previousState.roundStatus === "ACTIVE" && response.state.roundStatus === "ENDED") {
+                  console.log("[Guest] Round ended!")
                   // Get round results from the latest bids
                   const roundBids = response.state.bids.filter((bid: any) => bid.round === response.state.currentRound)
                   const roundResults = {
@@ -85,6 +101,7 @@ export default function GuestRoom() {
                     winner: roundBids.length > 0 ? roundBids.reduce((max: any, bid: any) => bid.amount > max.amount ? bid : max) : null
                   }
                   
+                  console.log("[Guest] Round results:", roundResults)
                   setRoundResults(roundResults)
                   
                   if (roundResults.winner) {
@@ -102,16 +119,22 @@ export default function GuestRoom() {
               }
               
               previousState = response.state
+            } else {
+              console.log("[Guest] Guest not found in room, might have been removed")
+              // Guest was removed from room
+              setError("방에서 제거되었습니다.")
+              setIsConnected(false)
             }
           }
         } else {
+          console.log("[Guest] Room not found or error:", response.error)
           setIsConnected(false)
-          setError("존재하지 않는 방입니다.")
+          setError(response.error || "존재하지 않는 방입니다.")
         }
       } catch (error) {
-        console.error("Failed to check room:", error)
-        setIsConnected(false)
-        setError("서버에 연결할 수 없습니다.")
+        console.error("[Guest] Failed to check room:", error)
+        // Don't immediately disconnect on network errors, just log them
+        console.log("[Guest] Network error, continuing to poll...")
       }
     }
 
@@ -122,6 +145,7 @@ export default function GuestRoom() {
     const interval = setInterval(checkRoomAndPoll, 2000)
 
     return () => {
+      isPolling = false
       clearInterval(interval)
     }
   }, [roomId, guestData?.nickname])
@@ -198,16 +222,27 @@ export default function GuestRoom() {
     setIsBidding(true)
     
     try {
+      console.log("[Guest] Placing bid:", { roomId, nickname: guestData.nickname, amount })
       const response = await auctionAPI.placeBid(roomId, guestData.nickname, amount)
+      console.log("[Guest] Bid response:", response)
+      
       if (response.success) {
-        setGuestData((prev) => (prev ? { ...prev, capital: response.remainingCapital } : null))
+        // Update guest data immediately
+        setGuestData((prev) => (prev ? { 
+          ...prev, 
+          capital: response.remainingCapital,
+          hasBidInCurrentRound: response.hasBidInCurrentRound
+        } : null))
         setCanBid(!response.hasBidInCurrentRound)
         setBidAmount("")
+        
+        console.log("[Guest] Bid successful, updated guest data")
         toast({
           title: "입찰 완료",
           description: `입찰이 성공적으로 처리되었습니다. 남은 자본: ${response.remainingCapital.toLocaleString()}원`,
         })
       } else {
+        console.log("[Guest] Bid failed:", response.error)
         toast({
           title: "입찰 실패",
           description: response.error || "입찰에 실패했습니다.",
@@ -215,7 +250,7 @@ export default function GuestRoom() {
         })
       }
     } catch (error) {
-      console.error("Failed to place bid:", error)
+      console.error("[Guest] Failed to place bid:", error)
       toast({
         title: "연결 오류",
         description: "서버에 연결할 수 없습니다.",

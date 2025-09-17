@@ -161,16 +161,23 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const roomId = searchParams.get('roomId')
 
+  console.log("[API] GET request for roomId:", roomId)
+  console.log("[API] Available rooms:", Array.from(auctionRooms.keys()))
+
   if (!roomId) {
+    console.log("[API] No roomId provided")
     return NextResponse.json({ success: false, error: "Room ID is required" }, { status: 400 })
   }
 
   const room = auctionRooms.get(roomId)
   if (!room) {
+    console.log("[API] Room not found:", roomId)
     return NextResponse.json({ success: false, error: "Room not found" }, { status: 404 })
   }
 
-  return NextResponse.json({ success: true, state: room.getState() })
+  const state = room.getState()
+  console.log("[API] Returning state for room:", roomId, state)
+  return NextResponse.json({ success: true, state })
 }
 
 export async function POST(request: NextRequest) {
@@ -272,23 +279,30 @@ export async function POST(request: NextRequest) {
 
       case 'placeBid':
         const { roomId: bidRoomId, nickname: bidNickname, amount } = data
+        console.log("[API] Place bid request:", { bidRoomId, bidNickname, amount })
+        
         const bidRoom = auctionRooms.get(bidRoomId)
         
         if (!bidRoom) {
+          console.log("[API] Room not found for bid:", bidRoomId)
           return NextResponse.json({ success: false, error: "존재하지 않는 방입니다" })
         }
 
         try {
+          console.log("[API] Placing bid in room:", bidRoomId)
           bidRoom.placeBid(bidNickname, amount)
           const guest = bidRoom.guests.get(bidNickname)
+          const state = bidRoom.getState()
           
+          console.log("[API] Bid successful, new state:", state)
           return NextResponse.json({
             success: true,
-            state: bidRoom.getState(),
+            state,
             remainingCapital: guest.capital,
             hasBidInCurrentRound: guest.hasBidInCurrentRound
           })
         } catch (error: any) {
+          console.log("[API] Bid failed:", error.message)
           return NextResponse.json({ success: false, error: error.message })
         }
 

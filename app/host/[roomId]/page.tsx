@@ -28,15 +28,23 @@ export default function HostDashboard() {
   const [newCapital, setNewCapital] = useState("")
 
   useEffect(() => {
+    let isPolling = true
+    
     // Load room state on mount
     const loadRoomState = async () => {
+      if (!isPolling) return
+      
       try {
+        console.log("[Host] Polling room state for roomId:", roomId)
         const response = await auctionAPI.getState(roomId)
+        console.log("[Host] Poll response:", response)
+        
         if (response.success) {
           setAuctionState(response.state)
           setJoinUrl(`${window.location.origin}/room/${roomId}`)
           setIsConnected(true)
         } else {
+          console.log("[Host] Room not found or error:", response.error)
           toast({
             title: "오류",
             description: response.error || "방을 찾을 수 없습니다.",
@@ -47,12 +55,9 @@ export default function HostDashboard() {
           }, 800)
         }
       } catch (error) {
-        console.error("Failed to load room state:", error)
-        toast({
-          title: "연결 오류",
-          description: "서버에 연결할 수 없습니다.",
-          variant: "destructive",
-        })
+        console.error("[Host] Failed to load room state:", error)
+        // Don't immediately show error on network issues, just log them
+        console.log("[Host] Network error, continuing to poll...")
       }
     }
 
@@ -62,6 +67,7 @@ export default function HostDashboard() {
     const interval = setInterval(loadRoomState, 2000)
 
     return () => {
+      isPolling = false
       clearInterval(interval)
     }
   }, [roomId])
