@@ -75,7 +75,13 @@ export default function HomePage() {
       if (response.success) {
         console.log("[Create Auction] Room created, redirecting to:", response.roomId)
         setIsCreating(false)
-        router.push(`/host/${response.roomId}`)
+        
+        // 경매 방식에 따라 다른 페이지로 리다이렉트
+        if (auctionData.method === 'dynamic') {
+          router.push(`/host-dynamic/${response.roomId}`)
+        } else {
+          router.push(`/host/${response.roomId}`)
+        }
       } else {
         toast({
           title: "오류",

@@ -65,40 +65,117 @@ class AuctionRoom {
     }
   }
 
-  placeBid(nickname: string, amount: number) {
+  placeBid(nickname: string, amount: number, auctionMethod = 'fixed') {
     const guest = this.guests.get(nickname)
     if (!guest) {
       throw new Error("게스트를 찾을 수 없습니다")
     }
 
-    if (amount <= 0 || amount > guest.capital) {
-      throw new Error("유효하지 않은 입찰 금액입니다")
+    if (amount <= 0) {
+      throw new Error("입찰 금액은 0보다 커야 합니다")
     }
 
     if (this.status !== "ACTIVE" || this.roundStatus !== "ACTIVE") {
       throw new Error("현재 라운드가 활성화되지 않았습니다")
     }
 
-    // 라운드별 중복 입찰 방지
-    if (guest.hasBidInCurrentRound) {
-      throw new Error("이미 이번 라운드에서 입찰하셨습니다")
+    if (auctionMethod === 'fixed') {
+      // 고정입찰: 기존 로직
+      if (amount > guest.capital) {
+        throw new Error("보유 자본보다 높은 금액을 입찰할 수 없습니다")
+      }
+
+      // 라운드별 중복 입찰 방지
+      if (guest.hasBidInCurrentRound) {
+        throw new Error("이미 이번 라운드에서 입찰하셨습니다")
+      }
+
+      // Update guest capital
+      guest.capital -= amount
+
+      // Mark guest as having bid in current round
+      guest.hasBidInCurrentRound = true
+
+      // Add bid to history
+      this.bids.push({
+        nickname,
+        amount,
+        timestamp: new Date(),
+        round: this.currentRound,
+      })
+
+      return { success: true, type: 'fixed' }
+    } else if (auctionMethod === 'dynamic') {
+      // 변동입찰: 새로운 로직
+      if (amount > guest.capital) {
+        throw new Error("보유 자본보다 높은 금액을 입찰할 수 없습니다")
+      }
+
+      // 현재 라운드의 최고 입찰 확인
+      const currentRoundBids = this.bids.filter(bid => bid.round === this.currentRound)
+      const currentHighestBid = currentRoundBids.length > 0 ?
+        Math.max(...currentRoundBids.map(bid => bid.amount)) : 0
+
+      if (amount <= currentHighestBid) {
+        throw new Error(`현재 최고 입찰가(${currentHighestBid}원)보다 높은 금액을 입찰해야 합니다`)
+      }
+
+      // 이전 입찰 취소 및 자본 환원
+      const previousBid = this.bids.find(bid =>
+        bid.nickname === nickname && bid.round === this.currentRound
+      )
+      if (previousBid) {
+        guest.capital += previousBid.amount // 이전 입찰 금액 환원
+        // 이전 입찰 기록 제거
+        this.bids = this.bids.filter(bid =>
+          !(bid.nickname === nickname && bid.round === this.currentRound)
+        )
+      }
+
+      // 다른 참가자들의 입찰 취소 및 상태 초기화
+      const otherBids = this.bids.filter(bid =>
+        bid.nickname !== nickname && bid.round === this.currentRound
+      )
+
+      console.log(`[API] Dynamic bid: Cancelling ${otherBids.length} other bids`)
+
+      for (const bid of otherBids) {
+        const otherGuest = this.guests.get(bid.nickname)
+        if (otherGuest) {
+          otherGuest.capital += bid.amount // 자본 환원
+          otherGuest.hasBidInCurrentRound = false // 입찰 상태 초기화
+          console.log(`[API] Cancelled bid for ${bid.nickname}: +${bid.amount}, new capital: ${otherGuest.capital}`)
+        }
+      }
+
+      // 다른 참가자들의 입찰 기록 완전 제거
+      this.bids = this.bids.filter(bid =>
+        !(bid.nickname !== nickname && bid.round === this.currentRound)
+      )
+
+      console.log(`[API] Removed ${otherBids.length} bid records from history`)
+
+      // 새로운 입찰 처리
+      guest.capital -= amount
+      guest.hasBidInCurrentRound = true
+
+      // Add new bid to history
+      this.bids.push({
+        nickname,
+        amount,
+        timestamp: new Date(),
+        round: this.currentRound,
+      })
+
+      return {
+        success: true,
+        type: 'dynamic',
+        previousBid: previousBid?.amount || 0,
+        cancelledBids: otherBids.map(bid => ({ nickname: bid.nickname, amount: bid.amount }))
+      }
     }
 
-    // Update guest capital
-    guest.capital -= amount
-
-    // Mark guest as having bid in current round
-    guest.hasBidInCurrentRound = true
-
-    // Add bid to history
-    this.bids.push({
-      nickname,
-      amount,
-      timestamp: new Date(),
-      round: this.currentRound,
-    })
-
-    return true
+    return { success: false }
   }
 
   startAuction() {
@@ -140,6 +217,10 @@ class AuctionRoom {
   }
 
   getState() {
+    const currentRoundBids = this.bids.filter(bid => bid.round === this.currentRound)
+    const highestBid = currentRoundBids.length > 0 ?
+      currentRoundBids.reduce((max, bid) => bid.amount > max.amount ? bid : max) : null
+
     return {
       id: this.id,
       name: this.name,
@@ -154,6 +235,7 @@ class AuctionRoom {
       guestCount: this.guests.size,
       currentRound: this.currentRound,
       roundStatus: this.roundStatus,
+      currentHighestBid: highestBid,
     }
   }
 }
@@ -301,8 +383,8 @@ export async function POST(request: NextRequest) {
         }
 
       case 'placeBid':
-        const { roomId: bidRoomId, nickname: bidNickname, amount } = data
-        console.log("[API] Place bid request:", { bidRoomId, bidNickname, amount })
+        const { roomId: bidRoomId, nickname: bidNickname, amount, auctionMethod = 'fixed' } = data
+        console.log("[API] Place bid request:", { bidRoomId, bidNickname, amount, auctionMethod })
         
         const bidRoom = auctionRooms.get(bidRoomId)
         
@@ -313,13 +395,14 @@ export async function POST(request: NextRequest) {
 
         try {
           console.log("[API] Placing bid in room:", bidRoomId)
-          bidRoom.placeBid(bidNickname, amount)
+          const bidResult = bidRoom.placeBid(bidNickname, amount, auctionMethod)
           const guest = bidRoom.guests.get(bidNickname)
           const state = bidRoom.getState()
           
           console.log("[API] Bid successful, new state:", state)
           return NextResponse.json({
             success: true,
+            bidResult,
             state,
             remainingCapital: guest.capital,
             hasBidInCurrentRound: guest.hasBidInCurrentRound
