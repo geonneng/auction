@@ -388,8 +388,8 @@ export default function DynamicHostDashboard() {
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
           {/* Participants */}
-          <Card className="h-96">
-            <CardHeader>
+          <Card className="h-96 overflow-hidden">
+            <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-6 w-6" />
                 참가자 ({auctionState.guestCount}/6)
@@ -398,7 +398,7 @@ export default function DynamicHostDashboard() {
                 변동입찰: 실시간 자본금 및 최고 입찰자 표시
               </CardDescription>
             </CardHeader>
-            <CardContent className="h-full">
+            <CardContent className="h-full overflow-hidden">
               {auctionState.guests.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   아직 참가자가 없습니다.
@@ -406,32 +406,33 @@ export default function DynamicHostDashboard() {
                   참여 링크를 공유해주세요.
                 </div>
               ) : (
-                <div className="h-full overflow-y-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-lg">닉네임</TableHead>
-                        <TableHead className="text-center text-lg">입찰 상태</TableHead>
-                        <TableHead className="text-right text-lg">남은 자본</TableHead>
-                        <TableHead className="text-center text-lg">액션</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {auctionState.guests.map((guest) => (
-                        <TableRow key={guest.nickname} className="h-12">
-                          <TableCell className="font-medium text-lg">{guest.nickname}</TableCell>
-                          <TableCell className="text-center">
+                <div className="h-full overflow-y-auto overflow-x-hidden">
+                  <div className="min-w-full">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-lg w-[120px] min-w-[120px]">닉네임</TableHead>
+                          <TableHead className="text-center text-lg w-[100px] min-w-[100px]">입찰 상태</TableHead>
+                          <TableHead className="text-right text-lg w-[120px] min-w-[120px]">남은 자본</TableHead>
+                          <TableHead className="text-center text-lg w-[100px] min-w-[100px]">액션</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {auctionState.guests.map((guest) => (
+                          <TableRow key={guest.nickname} className="h-12">
+                            <TableCell className="font-medium text-lg truncate w-[120px] min-w-[120px] max-w-[120px]">{guest.nickname}</TableCell>
+                          <TableCell className="text-center w-[100px] min-w-[100px] max-w-[100px]">
                             {auctionState.roundStatus === "ACTIVE" ? (
                               guest.hasBidInCurrentRound ? (
-                                <Badge variant="secondary">입찰 완료</Badge>
+                                <Badge variant="secondary" className="text-xs">입찰 완료</Badge>
                               ) : (
-                                <Badge variant="outline">입찰 대기</Badge>
+                                <Badge variant="outline" className="text-xs">입찰 대기</Badge>
                               )
                             ) : (
-                              <Badge variant="outline">대기 중</Badge>
+                              <Badge variant="outline" className="text-xs">대기 중</Badge>
                             )}
                           </TableCell>
-                          <TableCell className="text-right font-mono text-lg">
+                          <TableCell className="text-right font-mono text-lg w-[120px] min-w-[120px] max-w-[120px]">
                             {editingGuest === guest.nickname ? (
                               <div className="flex items-center gap-2">
                                 <Input
@@ -468,19 +469,19 @@ export default function DynamicHostDashboard() {
                               </span>
                             )}
                           </TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="text-center w-[100px] min-w-[100px] max-w-[100px]">
                             {editingGuest === guest.nickname ? (
-                              <span className="text-sm text-muted-foreground">편집 중</span>
+                              <span className="text-xs text-muted-foreground">편집 중</span>
                             ) : auctionState.roundStatus === "ACTIVE" ? (
-                              <span className="text-sm text-muted-foreground">라운드 중</span>
+                              <span className="text-xs text-muted-foreground">라운드 중</span>
                             ) : (
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleEditCapital(guest.nickname, guest.capital)}
-                                className="h-8 px-2"
+                                className="h-6 px-1 text-xs"
                               >
-                                자본금 수정
+                                수정
                               </Button>
                             )}
                           </TableCell>
@@ -488,14 +489,15 @@ export default function DynamicHostDashboard() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 </div>
               )}
             </CardContent>
           </Card>
 
           {/* Real-time Bid Feed or Round Results */}
-          <Card className="h-96">
-            <CardHeader>
+          <Card className="h-96 overflow-hidden">
+            <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-6 w-6" />
                 {roundResults ? `라운드 ${roundResults.round} 결과` : "실시간 입찰 현황"}
@@ -504,8 +506,8 @@ export default function DynamicHostDashboard() {
                 {roundResults ? "라운드 종료 후 입찰 결과가 공개됩니다" : "변동입찰: 실시간 금액 및 순위 표시"}
               </CardDescription>
             </CardHeader>
-            <CardContent className="h-full">
-              <div className="space-y-3 h-full overflow-y-auto">
+            <CardContent className="h-full overflow-hidden">
+              <div className="space-y-3 h-full overflow-y-auto overflow-x-hidden">
                 {roundResults ? (
                   <div className="space-y-4">
                     {roundResults.winner && (
@@ -525,14 +527,14 @@ export default function DynamicHostDashboard() {
                       </div>
                       {roundResults.bids.map((bid, index) => (
                         <Alert key={`${bid.nickname}-${bid.timestamp}-${index}`} className="py-3">
-                          <AlertDescription className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-lg">{bid.nickname}</span>
-                              {index === 0 && <Badge variant="default">1위</Badge>}
-                              {index === 1 && <Badge variant="secondary">2위</Badge>}
-                              {index === 2 && <Badge variant="outline">3위</Badge>}
+                          <AlertDescription className="flex items-center justify-between min-w-0">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <span className="font-bold text-lg truncate">{bid.nickname}</span>
+                              {index === 0 && <Badge variant="default" className="flex-shrink-0">1위</Badge>}
+                              {index === 1 && <Badge variant="secondary" className="flex-shrink-0">2위</Badge>}
+                              {index === 2 && <Badge variant="outline" className="flex-shrink-0">3위</Badge>}
                             </div>
-                            <div className="text-right">
+                            <div className="text-right flex-shrink-0 ml-2">
                               <div className="font-mono font-bold text-lg">{bid.amount?.toLocaleString()}원</div>
                               <div className="text-xs text-muted-foreground">
                                 {new Date(bid.timestamp).toLocaleTimeString()}
@@ -566,16 +568,16 @@ export default function DynamicHostDashboard() {
                               index === 0 ? 'border-emerald-200 bg-emerald-50' : ''
                             }`}
                           >
-                            <AlertDescription className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-lg">{bid.nickname}</span>
+                            <AlertDescription className="flex items-center justify-between min-w-0">
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <span className="font-bold text-lg truncate">{bid.nickname}</span>
                                 {index === 0 ? (
-                                  <Badge variant="default" className="bg-emerald-600">최고 입찰</Badge>
+                                  <Badge variant="default" className="bg-emerald-600 flex-shrink-0">최고 입찰</Badge>
                                 ) : (
-                                  <Badge variant="outline">입찰됨</Badge>
+                                  <Badge variant="outline" className="flex-shrink-0">입찰됨</Badge>
                                 )}
                               </div>
-                              <div className="text-right">
+                              <div className="text-right flex-shrink-0 ml-2">
                                 <div className={`font-mono font-bold text-lg ${
                                   index === 0 ? 'text-emerald-600' : 'text-foreground'
                                 }`}>
