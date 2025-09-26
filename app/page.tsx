@@ -24,7 +24,9 @@ import { useRouter } from "next/navigation"
 import { auctionAPI } from "@/lib/api"
 import { toast } from "@/hooks/use-toast"
 import { Sidebar } from "@/components/sidebar"
-import { FloatingElements, PulsatingGradient } from "@/components/ui/floating-elements"
+import { ModernGrid } from "@/components/ui/modern-grid"
+import { GeometricShapes } from "@/components/ui/geometric-shapes"
+import { ModernGlow } from "@/components/ui/modern-glow"
 
 export default function HomePage() {
   const router = useRouter()
@@ -49,14 +51,8 @@ export default function HomePage() {
   }
 
   const handleCreateAuction = async () => {
-    if (!auctionData.name.trim()) {
-      toast({
-        title: "입력 오류",
-        description: "경매 이름을 입력해주세요.",
-        variant: "destructive",
-      })
-      return
-    }
+    // 경매 이름이 비어있으면 "다시마 경매"로 자동 설정
+    const auctionName = auctionData.name.trim() || "다시마 경매"
 
     const capital = Number.parseInt(auctionData.initialCapital)
     if (isNaN(capital) || capital <= 0) {
@@ -71,7 +67,7 @@ export default function HomePage() {
     setIsCreating(true)
     
     try {
-      const response = await auctionAPI.createRoom(capital, auctionData.name.trim())
+      const response = await auctionAPI.createRoom(capital, auctionName)
       if (response.success) {
         console.log("[Create Auction] Room created, redirecting to:", response.roomId)
         setIsCreating(false)
@@ -80,7 +76,7 @@ export default function HomePage() {
         if (auctionData.method === 'dynamic') {
           router.push(`/host-dynamic/${response.roomId}`)
         } else {
-          router.push(`/host/${response.roomId}`)
+        router.push(`/host/${response.roomId}`)
         }
       } else {
         toast({
@@ -111,57 +107,65 @@ export default function HomePage() {
     <div>
       <Sidebar />
       <div className="ml-16">
-        {/* Clean Hero Section */}
-        <div className="relative h-[70vh] min-h-[600px] w-full bg-stone-200/60 overflow-hidden">
-          {/* Dynamic Background Elements */}
-          <FloatingElements />
-          <PulsatingGradient />
+        {/* Modern Hero Section */}
+        <div className="relative h-[70vh] min-h-[600px] w-full bg-gradient-to-br from-slate-50 via-white to-emerald-50/30 overflow-hidden">
+          {/* Modern Background Elements */}
+          <ModernGrid />
+          <GeometricShapes />
+          <ModernGlow />
           
           {/* Main content */}
           <div className="relative z-20 flex items-center justify-center h-full">
-            <div className="text-center space-y-8 max-w-4xl mx-auto px-6">
-              {/* Animated title */}
-              <div className="space-y-6">
+            <div className="text-center space-y-12 max-w-5xl mx-auto px-6">
+              {/* Clean Typography */}
+              <div className="space-y-8">
                 <div className="inline-block relative">
-                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-emerald-800 tracking-tight animate-fade-in-up">
+                  <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold text-slate-900 tracking-tight animate-scale-in-up">
                     가치오름
                   </h1>
-                  <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-3/4 h-1 bg-emerald-500 rounded-full animate-scale-in-delayed"></div>
-                  
-                  {/* Floating decorative elements around title */}
-                  <div className="absolute -top-6 -left-8 w-4 h-4 bg-emerald-400 rounded-full animate-bounce delay-1000"></div>
-                  <div className="absolute -bottom-4 -right-6 w-3 h-3 bg-blue-400 rounded-full animate-bounce delay-1500"></div>
-                  <div className="absolute top-1/2 -left-12 w-2 h-2 bg-purple-400 rounded-full animate-pulse delay-2000"></div>
-                  <div className="absolute top-1/4 -right-10 w-2 h-2 bg-emerald-300 rounded-full animate-pulse delay-2500"></div>
+                  <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-2/3 h-0.5 bg-emerald-500 rounded-full animate-scale-in-delayed"></div>
                 </div>
-                <h2 className="text-2xl md:text-3xl font-medium text-emerald-700 tracking-wide animate-fade-in-up delay-500">
+                
+                <h2 className="text-2xl md:text-3xl font-light text-slate-600 tracking-wide animate-slide-in-left delay-300">
                   실시간 경매 시뮬레이션
                 </h2>
               </div>
               
-              
-              {/* Animated CTA buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center mt-12 animate-fade-in-up delay-700">
+              {/* Modern CTA Section */}
+              <div className="flex flex-col sm:flex-row gap-6 justify-center mt-16 animate-scale-in-up delay-700">
                 <button 
                   onClick={() => {
                     const formElement = document.getElementById('auction-form');
                     formElement?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="group px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center relative overflow-hidden"
+                  className="group relative px-10 py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-semibold text-lg transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 flex items-center justify-center overflow-hidden"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-700 to-emerald-800 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
-                  <Gavel className="w-5 h-5 mr-2 relative z-10" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+                  <Gavel className="w-5 h-5 mr-3 relative z-10" />
                   <span className="relative z-10">경매 시작하기</span>
                 </button>
                 
                 <button 
                   onClick={() => router.push('/help')}
-                  className="group px-8 py-4 border-2 border-emerald-300 text-emerald-700 rounded-lg font-semibold text-lg transition-all duration-300 hover:border-emerald-400 hover:bg-emerald-50 flex items-center justify-center relative overflow-hidden"
+                  className="group relative px-10 py-4 border-2 border-slate-200 hover:border-slate-300 text-slate-700 hover:text-slate-900 rounded-2xl font-semibold text-lg transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 flex items-center justify-center overflow-hidden bg-white/50 backdrop-blur-sm"
                 >
-                  <div className="absolute inset-0 bg-emerald-50 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
-                  <Target className="w-5 h-5 mr-2 relative z-10" />
+                  <div className="absolute inset-0 bg-slate-50 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+                  <Target className="w-5 h-5 mr-3 relative z-10" />
                   <span className="relative z-10">사용법 보기</span>
                 </button>
+              </div>
+              
+              {/* Clean Feature Pills */}
+              <div className="flex flex-wrap justify-center gap-3 mt-12 animate-fade-in-up delay-1000">
+                <div className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
+                  실시간 입찰
+                </div>
+                <div className="px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                  교육용 설계
+                </div>
+                <div className="px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+                  직관적 UI
+                </div>
               </div>
             </div>
           </div>
@@ -221,13 +225,13 @@ export default function HomePage() {
                 <Label htmlFor="auction-name" className="text-xl font-semibold">경매 이름</Label>
                 <Input
                   id="auction-name"
-                  placeholder="예: 2024년 1학기 경제학 경매"
+                  placeholder="입력하지 않으면 '다시마 경매'로 설정됩니다"
                   value={auctionData.name}
                   onChange={(e) => setAuctionData(prev => ({ ...prev, name: e.target.value }))}
                   className="text-lg h-14 px-6 text-center shadow-lg border-2 focus:border-primary/50 bg-background/80 backdrop-blur-sm"
                 />
                 <p className="text-lg text-muted-foreground text-center bg-muted/30 p-4 rounded-lg">
-                  참가자들이 쉽게 식별할 수 있는 이름을 입력하세요.
+                  경매 이름을 입력하거나 비워두세요. 비워두면 "다시마 경매"로 자동 설정됩니다.
                 </p>
               </div>
             </div>
@@ -351,7 +355,7 @@ export default function HomePage() {
               className="text-lg h-12 px-8 shadow-lg border-emerald-200 hover:bg-emerald-50"
             >
               이전
-            </Button>
+                </Button>
             
             {currentStep < 3 ? (
               <Button onClick={handleNext} className="bg-emerald-600 hover:bg-emerald-700 text-lg h-12 px-8 shadow-lg">
