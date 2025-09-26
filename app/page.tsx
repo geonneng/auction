@@ -108,14 +108,14 @@ export default function HomePage() {
       {/* Header */}
       <div className="text-center space-y-8">
         <div className="flex items-center justify-center space-x-4 mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/60 rounded-2xl flex items-center justify-center shadow-lg">
-            <Sparkles className="h-8 w-8 text-primary-foreground" />
+          <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-3xl flex items-center justify-center shadow-xl">
+            <Sparkles className="h-10 w-10 text-white" />
           </div>
-          <h1 className="text-7xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
+          <h1 className="text-7xl font-bold bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-600 bg-clip-text text-transparent">
             경매 생성
           </h1>
-          <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/60 rounded-2xl flex items-center justify-center shadow-lg">
-            <Sparkles className="h-8 w-8 text-primary-foreground" />
+          <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl flex items-center justify-center shadow-xl">
+            <Sparkles className="h-10 w-10 text-white" />
           </div>
         </div>
         <p className="text-2xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
@@ -129,15 +129,15 @@ export default function HomePage() {
       </div>
 
       {/* Progress Steps */}
-      <Card className="bg-gradient-to-r from-primary/5 via-primary/8 to-primary/10 border-primary/20 shadow-lg backdrop-blur-sm">
+      <Card className="bg-gradient-to-r from-emerald-50/50 via-blue-50/50 to-purple-50/50 border-emerald-200/30 shadow-xl backdrop-blur-sm">
         <CardContent className="p-10">
           <div className="flex items-center justify-between">
             {steps.map((step, index) => (
               <div key={step.number} className="flex items-center space-x-6">
                 <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-lg font-bold shadow-lg transition-all duration-300 ${
                   currentStep >= step.number 
-                    ? 'bg-gradient-to-br from-primary to-primary/80 text-primary-foreground scale-105' 
-                    : 'bg-muted/50 text-muted-foreground hover:bg-muted/80'
+                    ? 'bg-gradient-to-br from-emerald-500 to-blue-600 text-white scale-105' 
+                    : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-500 hover:from-gray-200 hover:to-gray-300'
                 }`}>
                   {step.number}
                 </div>
@@ -146,7 +146,9 @@ export default function HomePage() {
                   <p className="text-base text-muted-foreground">{step.description}</p>
                 </div>
                 {index < steps.length - 1 && (
-                  <div className="hidden sm:block w-16 h-1 bg-gradient-to-r from-muted to-muted/50 mx-6 rounded-full"></div>
+                  <div className={`hidden sm:block w-16 h-1 mx-6 rounded-full transition-all duration-300 ${
+                    step.number < currentStep ? 'bg-gradient-to-r from-emerald-400 to-blue-500' : 'bg-gradient-to-r from-gray-200 to-gray-300'
+                  }`}></div>
                 )}
               </div>
             ))}
@@ -155,11 +157,11 @@ export default function HomePage() {
       </Card>
 
       {/* Step Content */}
-      <Card className="min-h-[600px] shadow-xl border-0 bg-gradient-to-br from-background/95 to-muted/20 backdrop-blur-sm">
+      <Card className="min-h-[600px] shadow-2xl border border-emerald-200/20 bg-gradient-to-br from-white/95 to-emerald-50/30 backdrop-blur-lg">
         <CardHeader className="pb-8">
           <CardTitle className="flex items-center space-x-4 text-3xl">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/60 rounded-xl flex items-center justify-center shadow-lg">
-              <Settings className="h-6 w-6 text-primary-foreground" />
+            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+              <Settings className="h-6 w-6 text-white" />
             </div>
             <span className="bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
               {steps[currentStep - 1].title}

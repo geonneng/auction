@@ -126,14 +126,14 @@ export default function HelpPage() {
       {/* Header */}
       <div className="text-center space-y-6">
         <div className="flex items-center justify-center space-x-3 mb-6">
-          <BookOpen className="h-10 w-10 text-primary" />
-          <h1 className="text-6xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+          <BookOpen className="h-10 w-10 text-emerald-500" />
+          <h1 className="text-6xl font-bold bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-600 bg-clip-text text-transparent">
             도움말
           </h1>
-          <BookOpen className="h-10 w-10 text-primary" />
+          <BookOpen className="h-10 w-10 text-blue-500" />
         </div>
         <p className="text-2xl text-muted-foreground max-w-3xl mx-auto">
-          다시마 경매 사용법과 주요 기능을 자세히 알아보세요
+          가치오름 플랫폼 사용법과 주요 기능을 자세히 알아보세요
         </p>
         <Badge variant="secondary" className="text-base px-4 py-2">
           <Lightbulb className="h-4 w-4 mr-2" />
