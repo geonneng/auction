@@ -13,7 +13,7 @@ export function GuestLayout({ children, roomId, guestName }: GuestLayoutProps) {
   return (
     <div className="flex relative z-10">
       <GuestSidebar roomId={roomId} guestName={guestName} />
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-6 pt-8">
         {children}
       </main>
     </div>
