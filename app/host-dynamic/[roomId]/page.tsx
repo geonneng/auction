@@ -16,7 +16,7 @@ import QRCodeComponent from "@/components/qr-code"
 import { Sidebar } from "@/components/sidebar"
 import { AuctionItemProvider } from "@/contexts/auction-item-context"
 
-export default function HostDashboard() {
+export default function DynamicHostDashboard() {
   const params = useParams()
   const roomId = params.roomId as string
   const router = useRouter()
@@ -28,6 +28,7 @@ export default function HostDashboard() {
   const [roundResults, setRoundResults] = useState<RoundResults | null>(null)
   const [editingGuest, setEditingGuest] = useState<string | null>(null)
   const [newCapital, setNewCapital] = useState("")
+  const [currentHighestBid, setCurrentHighestBid] = useState<any>(null)
 
   useEffect(() => {
     let isPolling = true
@@ -40,13 +41,13 @@ export default function HostDashboard() {
       if (!isPolling) return
       
       try {
-        console.log("[Host] Polling room state for roomId:", roomId)
+        console.log("[Dynamic Host] Polling room state for roomId:", roomId)
         const response = await auctionAPI.getState(roomId)
-        console.log("[Host] Poll response:", response)
+        console.log("[Dynamic Host] Poll response:", response)
         
         if (response.success) {
           setAuctionState(response.state)
-          setJoinUrl(`${window.location.origin}/room/${roomId}`)
+          setJoinUrl(`${window.location.origin}/room-dynamic/${roomId}`)
           setIsConnected(true)
           consecutiveErrors = 0 // Reset error count on success
           
@@ -54,13 +55,20 @@ export default function HostDashboard() {
           if (response.state.bids && response.state.bids.length > 0) {
             setRecentBids(response.state.bids.slice(-20)) // Keep last 20 bids
           }
+
+          // Update current highest bid
+          if (response.state.currentHighestBid) {
+            setCurrentHighestBid(response.state.currentHighestBid)
+          } else {
+            setCurrentHighestBid(null)
+          }
         } else {
-          console.log("[Host] Room not found or error:", response.error)
+          console.log("[Dynamic Host] Room not found or error:", response.error)
           consecutiveErrors++
           
           // Only show error after many consecutive failures
           if (consecutiveErrors >= maxConsecutiveErrors) {
-            console.log("[Host] Many consecutive errors, but not redirecting")
+            console.log("[Dynamic Host] Many consecutive errors, but not redirecting")
             toast({
               title: "연결 문제",
               description: "서버 연결에 문제가 있습니다. 계속 시도 중...",
@@ -69,14 +77,14 @@ export default function HostDashboard() {
           }
           
           // Never redirect to home - keep trying
-          console.log("[Host] Room error, but continuing to poll... attempt", consecutiveErrors)
+          console.log("[Dynamic Host] Room error, but continuing to poll... attempt", consecutiveErrors)
         }
       } catch (error) {
-        console.error("[Host] Failed to load room state:", error)
+        console.error("[Dynamic Host] Failed to load room state:", error)
         consecutiveErrors++
         
         // Never redirect due to network errors - keep trying
-        console.log("[Host] Network error, but continuing to poll... attempt", consecutiveErrors)
+        console.log("[Dynamic Host] Network error, but continuing to poll... attempt", consecutiveErrors)
       }
     }
 
@@ -100,7 +108,7 @@ export default function HostDashboard() {
         setAuctionState(response.state)
         toast({
           title: "경매 시작",
-          description: "경매가 시작되었습니다!",
+          description: "변동입찰 경매가 시작되었습니다!",
         })
       } else {
         toast({
@@ -123,7 +131,7 @@ export default function HostDashboard() {
     if (!auctionState) return
     
     try {
-      console.log("[v0] Starting round for room:", auctionState.id)
+      console.log("[Dynamic Host] Starting round for room:", auctionState.id)
       setRoundResults(null) // Clear previous round results
       
       const response = await auctionAPI.startRound(auctionState.id)
@@ -131,7 +139,7 @@ export default function HostDashboard() {
         setAuctionState(response.state)
         toast({
           title: "라운드 시작",
-          description: `라운드 ${response.round}가 시작되었습니다!`,
+          description: `라운드 ${response.round}가 시작되었습니다! (변동입찰)`,
         })
       } else {
         toast({
@@ -195,7 +203,7 @@ export default function HostDashboard() {
         description: "참여 링크가 클립보드에 복사되었습니다.",
       })
     } catch (err) {
-      console.error("[v0] Failed to copy:", err)
+      console.error("[Dynamic Host] Failed to copy:", err)
     }
   }
 
@@ -217,7 +225,7 @@ export default function HostDashboard() {
       return
     }
 
-    console.log(`[v0] Modifying capital for ${editingGuest}: ${amount}`)
+    console.log(`[Dynamic Host] Modifying capital for ${editingGuest}: ${amount}`)
     
     try {
       const response = await auctionAPI.modifyCapital(auctionState.id, editingGuest, amount)
@@ -287,9 +295,9 @@ export default function HostDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-emerald-600">
-              {auctionState.name ? `${auctionState.name} - 호스트` : '가치오름 - 호스트'}
+              {auctionState.name ? `${auctionState.name} - 변동입찰 호스트` : '가치오름 - 변동입찰 호스트'}
             </h1>
-            <p className="text-muted-foreground">방 ID: {auctionState.id}</p>
+            <p className="text-muted-foreground">방 ID: {auctionState.id} | 경매 방식: 변동입찰</p>
             {auctionState.status === "ACTIVE" && (
               <p className="text-sm text-muted-foreground">
                 현재 라운드: {auctionState.currentRound} | 
@@ -310,14 +318,51 @@ export default function HostDashboard() {
           </div>
         </div>
 
+        {/* 변동입찰 최고 입찰 정보 */}
+        {auctionState.status === "ACTIVE" && auctionState.currentRound > 0 && (
+          <Card className="border-emerald-200 bg-emerald-50/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-emerald-700">
+                <TrendingUp className="h-5 w-5" />
+                {auctionState.roundStatus === "ACTIVE" ? "현재 최고 입찰" : "라운드 최고 입찰"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {currentHighestBid ? (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-lg font-semibold text-emerald-800">
+                      {currentHighestBid.nickname}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {auctionState.roundStatus === "ACTIVE" ? "최고 입찰자" : "라운드 승리자"}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-emerald-600">
+                      {currentHighestBid.amount.toLocaleString()}원
+                    </p>
+                    <p className="text-sm text-muted-foreground">입찰 금액</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center text-muted-foreground py-4">
+                  <p>아직 입찰자가 없습니다</p>
+                  <p className="text-sm">참가자들이 입찰할 때까지 기다려주세요</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Join URL Card */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              참여 링크
+              참여 링크 (변동입찰)
             </CardTitle>
-            <CardDescription>게스트들이 이 링크를 통해 경매에 참여할 수 있습니다.</CardDescription>
+            <CardDescription>게스트들이 이 링크를 통해 변동입찰 경매에 참여할 수 있습니다.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -350,8 +395,7 @@ export default function HostDashboard() {
                 참가자 ({auctionState.guestCount}/6)
               </CardTitle>
               <CardDescription>
-                현재 접속 중인 게스트들의 목록과 자본금 현황 
-                {auctionState.roundStatus === "ACTIVE" && " (라운드 진행 중 자본금 숨김)"}
+                변동입찰: 실시간 자본금 및 최고 입찰자 표시
               </CardDescription>
             </CardHeader>
             <CardContent className="h-full overflow-hidden">
@@ -415,12 +459,14 @@ export default function HostDashboard() {
                                 </Button>
                               </div>
                             ) : (
-                              // 라운드가 진행 중일 때는 남은 자본 숨김
-                              auctionState.roundStatus === "ACTIVE" ? (
-                                <span className="text-muted-foreground">•••••원</span>
-                              ) : (
-                                <span>{guest.capital.toLocaleString()}원</span>
-                              )
+                              // 변동입찰에서는 항상 자본 표시, 최고 입찰자 강조
+                              <span className={
+                                currentHighestBid?.nickname === guest.nickname
+                                  ? "text-emerald-600 font-bold"
+                                  : ""
+                              }>
+                                {guest.capital.toLocaleString()}원
+                              </span>
                             )}
                           </TableCell>
                           <TableCell className="text-center w-[100px] min-w-[100px] max-w-[100px]">
@@ -457,7 +503,7 @@ export default function HostDashboard() {
                 {roundResults ? `라운드 ${roundResults.round} 결과` : "실시간 입찰 현황"}
               </CardTitle>
               <CardDescription>
-                {roundResults ? "라운드 종료 후 입찰 결과가 공개됩니다" : "최근 입찰 내역이 실시간으로 표시됩니다"}
+                {roundResults ? "라운드 종료 후 입찰 결과가 공개됩니다" : "변동입찰: 실시간 금액 및 순위 표시"}
               </CardDescription>
             </CardHeader>
             <CardContent className="h-full overflow-hidden">
@@ -500,7 +546,7 @@ export default function HostDashboard() {
                     </div>
                   </div>
                 ) : auctionState?.roundStatus === "ACTIVE" ? (
-                  // Show only current round bids during active round (hide amounts)
+                  // Show current round bids during active round (SHOW amounts for dynamic)
                   (() => {
                     const currentRoundBids = recentBids.filter(bid => bid.round === auctionState.currentRound)
                     const sortedBids = currentRoundBids.sort((a, b) => b.amount - a.amount)
@@ -513,18 +559,29 @@ export default function HostDashboard() {
                     ) : (
                       <div className="space-y-2">
                         <div className="text-sm text-muted-foreground mb-3">
-                          라운드 {auctionState.currentRound} 입찰 현황 ({sortedBids.length}건) - 라운드 종료 후 금액 공개
+                          라운드 {auctionState.currentRound} 입찰 현황 ({sortedBids.length}건) - 실시간 금액 표시
                         </div>
                         {sortedBids.map((bid, index) => (
-                          <Alert key={`${bid.nickname}-${bid.timestamp}-${index}`} className="py-3">
+                          <Alert 
+                            key={`${bid.nickname}-${bid.timestamp}-${index}`} 
+                            className={`py-3 ${
+                              index === 0 ? 'border-emerald-200 bg-emerald-50' : ''
+                            }`}
+                          >
                             <AlertDescription className="flex items-center justify-between min-w-0">
                               <div className="flex items-center gap-2 min-w-0 flex-1">
                                 <span className="font-bold text-lg truncate">{bid.nickname}</span>
-                                <Badge variant="outline" className="flex-shrink-0">입찰 완료</Badge>
+                                {index === 0 ? (
+                                  <Badge variant="default" className="bg-emerald-600 flex-shrink-0">최고 입찰</Badge>
+                                ) : (
+                                  <Badge variant="outline" className="flex-shrink-0">입찰됨</Badge>
+                                )}
                               </div>
                               <div className="text-right flex-shrink-0 ml-2">
-                                <div className="font-mono font-bold text-lg text-muted-foreground">
-                                  •••••원
+                                <div className={`font-mono font-bold text-lg ${
+                                  index === 0 ? 'text-emerald-600' : 'text-foreground'
+                                }`}>
+                                  {bid.amount?.toLocaleString()}원
                                 </div>
                                 <div className="text-xs text-muted-foreground">
                                   {new Date(bid.timestamp).toLocaleTimeString()}
@@ -555,15 +612,15 @@ export default function HostDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-6 w-6" />
-              경매 제어
+              변동입찰 경매 제어
             </CardTitle>
-            <CardDescription>경매 및 라운드 시작/종료 관리</CardDescription>
+            <CardDescription>변동입찰 경매 및 라운드 시작/종료 관리 - 실시간 재입찰 가능</CardDescription>
           </CardHeader>
           <CardContent>
             {auctionState.status === "PRE-START" ? (
               <div className="space-y-4">
                 <div className="text-sm text-muted-foreground">
-                  초기 자본금: {auctionState.initialCapital.toLocaleString()}원
+                  초기 자본금: {auctionState.initialCapital.toLocaleString()}원 | 경매 방식: 변동입찰
                 </div>
                 <Button
                   onClick={handleStartAuction}
@@ -571,7 +628,7 @@ export default function HostDashboard() {
                   size="lg"
                   className="w-full"
                 >
-                  경매 시작하기
+                  변동입찰 경매 시작하기
                 </Button>
                 {auctionState.guestCount === 0 && (
                   <p className="text-sm text-muted-foreground text-center">
@@ -583,7 +640,7 @@ export default function HostDashboard() {
               <div className="space-y-6">
                 <div className="text-center">
                   <Badge variant="default" className="text-lg px-4 py-2 mb-2">
-                    경매 진행 중
+                    변동입찰 경매 진행 중
                   </Badge>
                   <p className="text-sm text-muted-foreground">
                     현재 라운드: {auctionState.currentRound} | 
@@ -616,7 +673,7 @@ export default function HostDashboard() {
                   {auctionState.roundStatus === "WAITING" 
                     ? "라운드를 시작하면 게스트들이 입찰할 수 있습니다."
                     : auctionState.roundStatus === "ACTIVE"
-                    ? "현재 라운드가 진행 중입니다. 게스트들이 입찰하고 있습니다."
+                    ? "변동입찰 진행 중: 게스트들이 실시간으로 재입찰 가능합니다."
                     : "라운드가 종료되었습니다. 새로운 라운드를 시작하세요."}
                 </div>
               </div>

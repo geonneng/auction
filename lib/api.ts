@@ -36,12 +36,13 @@ export class AuctionAPI {
     }
   }
 
-  async createRoom(initialCapital: number) {
+  async createRoom(initialCapital: number, auctionName?: string) {
     return this.makeRequest(this.baseUrl, {
       method: 'POST',
       body: JSON.stringify({
         action: 'createRoom',
-        initialCapital
+        initialCapital,
+        auctionName
       })
     })
   }
@@ -87,14 +88,15 @@ export class AuctionAPI {
     })
   }
 
-  async placeBid(roomId: string, nickname: string, amount: number) {
+  async placeBid(roomId: string, nickname: string, amount: number, auctionMethod: 'fixed' | 'dynamic' = 'fixed') {
     return this.makeRequest(this.baseUrl, {
       method: 'POST',
       body: JSON.stringify({
         action: 'placeBid',
         roomId,
         nickname,
-        amount
+        amount,
+        auctionMethod
       })
     })
   }

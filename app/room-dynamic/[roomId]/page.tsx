@@ -16,7 +16,7 @@ import { toast } from "@/hooks/use-toast"
 import { GuestLayout } from "@/components/guest-layout"
 import { AuctionItemProvider } from "@/contexts/auction-item-context"
 
-export default function GuestRoom() {
+export default function DynamicGuestRoom() {
   const params = useParams()
   const roomId = params.roomId as string
   const router = useRouter()
@@ -31,6 +31,7 @@ export default function GuestRoom() {
   const [error, setError] = useState("")
   const [roundResults, setRoundResults] = useState<RoundResults | null>(null)
   const [canBid, setCanBid] = useState(true)
+  const [currentHighestBid, setCurrentHighestBid] = useState<any>(null)
 
   // Check if room exists on mount and poll for updates
   useEffect(() => {
@@ -45,12 +46,12 @@ export default function GuestRoom() {
       if (!isPolling) return
       
       try {
-        console.log("[Guest] Polling room state for roomId:", roomId)
+        console.log("[Dynamic Guest] Polling room state for roomId:", roomId)
         const response = await auctionAPI.getState(roomId)
-        console.log("[Guest] Poll response:", response)
+        console.log("[Dynamic Guest] Poll response:", response)
         
         if (response.success) {
-          console.log("[Guest] Connection successful!")
+          console.log("[Dynamic Guest] Connection successful!")
           setIsConnected(true)
           setError("") // Clear any previous errors
           retryCount = 0 // Reset retry count on success
@@ -59,7 +60,7 @@ export default function GuestRoom() {
           // If guest is already joined, update their data
           if (guestData) {
             const currentGuest = response.state.guests.find(g => g.nickname === guestData.nickname)
-            console.log("[Guest] Current guest found:", currentGuest)
+            console.log("[Dynamic Guest] Current guest found:", currentGuest)
             
             if (currentGuest) {
               const newGuestData = {
@@ -71,37 +72,63 @@ export default function GuestRoom() {
                 hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
               }
               
-              console.log("[Guest] Updating guest data:", newGuestData)
+              console.log("[Dynamic Guest] Updating guest data:", newGuestData)
               setGuestData(newGuestData)
-              setCanBid(!currentGuest.hasBidInCurrentRound)
+
+              // Update current highest bid
+              if (response.state.currentHighestBid) {
+                setCurrentHighestBid(response.state.currentHighestBid)
+              } else {
+                setCurrentHighestBid(null)
+              }
+              
+              // 변동입찰에서는 항상 입찰 가능 (라운드가 활성상태이고 자본이 있으면)
+              const dynamicCanBid = response.state.roundStatus === "ACTIVE" && currentGuest.capital > 0
+              console.log("[Dynamic Guest] Dynamic bid - always setting canBid to:", dynamicCanBid)
+              setCanBid(dynamicCanBid)
               
               // Check for state changes and show notifications
               if (previousState) {
-                console.log("[Guest] Previous state:", previousState)
-                console.log("[Guest] Current state:", response.state)
+                console.log("[Dynamic Guest] Previous state:", previousState)
+                console.log("[Dynamic Guest] Current state:", response.state)
+
+                // 변동입찰에서 자신의 입찰이 추월되었는지 확인
+                if (response.state.roundStatus === "ACTIVE") {
+                  const previousMyBid = previousState.currentHighestBid?.nickname === guestData.nickname
+                  const currentMyBid = response.state.currentHighestBid?.nickname === guestData.nickname
+                  
+                  // 이전에는 최고 입찰자였는데 지금은 아닌 경우
+                  if (previousMyBid && !currentMyBid && response.state.currentHighestBid) {
+                    toast({
+                      title: "입찰이 추월되었습니다",
+                      description: `${response.state.currentHighestBid.nickname}님이 ${response.state.currentHighestBid.amount.toLocaleString()}원으로 입찰했습니다. 더 높은 금액으로 재입찰하세요!`,
+                      variant: "destructive",
+                    })
+                  }
+                }
                 
                 // Auction started
                 if (previousState.status === "PRE-START" && response.state.status === "ACTIVE") {
-                  console.log("[Guest] Auction started!")
+                  console.log("[Dynamic Guest] Auction started!")
                   toast({
-                    title: "경매 시작",
-                    description: "경매가 시작되었습니다! 호스트가 라운드를 시작하면 입찰할 수 있습니다.",
+                    title: "변동입찰 경매 시작",
+                    description: "변동입찰 경매가 시작되었습니다! 호스트가 라운드를 시작하면 입찰할 수 있습니다.",
                   })
                 }
                 
                 // Round started
                 if (previousState.currentRound < response.state.currentRound && response.state.roundStatus === "ACTIVE") {
-                  console.log("[Guest] Round started!")
+                  console.log("[Dynamic Guest] Round started!")
                   toast({
                     title: "라운드 시작",
-                    description: `라운드 ${response.state.currentRound}이 시작되었습니다! 이제 입찰할 수 있습니다.`,
+                    description: `라운드 ${response.state.currentRound}이 시작되었습니다! 변동입찰로 실시간 재입찰이 가능합니다.`,
                   })
                   setRoundResults(null) // Clear previous round results
                 }
                 
                 // Round ended
                 if (previousState.roundStatus === "ACTIVE" && response.state.roundStatus === "ENDED") {
-                  console.log("[Guest] Round ended!")
+                  console.log("[Dynamic Guest] Round ended!")
                   // Get round results from the latest bids
                   const roundBids = response.state.bids.filter((bid: any) => bid.round === response.state.currentRound)
                   const roundResults = {
@@ -110,7 +137,7 @@ export default function GuestRoom() {
                     winner: roundBids.length > 0 ? roundBids.reduce((max: any, bid: any) => bid.amount > max.amount ? bid : max) : null
                   }
                   
-                  console.log("[Guest] Round results:", roundResults)
+                  console.log("[Dynamic Guest] Round results:", roundResults)
                   setRoundResults(roundResults)
                   
                   if (roundResults.winner) {
@@ -129,25 +156,25 @@ export default function GuestRoom() {
               
               previousState = response.state
             } else {
-              console.log("[Guest] Guest not found in room, might have been removed")
+              console.log("[Dynamic Guest] Guest not found in room, might have been removed")
               // Guest was removed from room - but don't immediately disconnect
               // Wait for many more polls to confirm
               consecutiveErrors++
               if (consecutiveErrors >= 10) { // Increased threshold
-                console.log("[Guest] Guest consistently not found, but not disconnecting")
+                console.log("[Dynamic Guest] Guest consistently not found, but not disconnecting")
                 // Don't disconnect, just show warning
                 setError("연결 상태를 확인하는 중...")
               }
             }
           }
         } else {
-          console.log("[Guest] Room not found or error:", response.error)
+          console.log("[Dynamic Guest] Room not found or error:", response.error)
           consecutiveErrors++
           retryCount++
           
           // If room not found, redirect to home after some attempts
           if (response.error === "Room not found" && consecutiveErrors >= 5) {
-            console.log("[Guest] Room not found, redirecting to home")
+            console.log("[Dynamic Guest] Room not found, redirecting to home")
             toast({
               title: "방을 찾을 수 없습니다",
               description: "존재하지 않는 방입니다. 홈으로 이동합니다.",
@@ -161,20 +188,20 @@ export default function GuestRoom() {
           
           // Only show error after many consecutive failures
           if (consecutiveErrors >= maxConsecutiveErrors) {
-            console.log("[Guest] Many consecutive errors, but not disconnecting")
+            console.log("[Dynamic Guest] Many consecutive errors, but not disconnecting")
             setError("연결 상태를 확인하는 중...")
           }
           
           // Never disconnect due to room not found - keep trying
-          console.log("[Guest] Room error, but continuing to poll... attempt", retryCount)
+          console.log("[Dynamic Guest] Room error, but continuing to poll... attempt", retryCount)
         }
       } catch (error) {
-        console.error("[Guest] Failed to check room:", error)
+        console.error("[Dynamic Guest] Failed to check room:", error)
         consecutiveErrors++
         retryCount++
         
         // Never disconnect due to network errors - keep trying
-        console.log("[Guest] Network error, but continuing to poll... attempt", retryCount)
+        console.log("[Dynamic Guest] Network error, but continuing to poll... attempt", retryCount)
         setError("연결 상태를 확인하는 중...")
       }
     }
@@ -208,15 +235,14 @@ export default function GuestRoom() {
     try {
       const response = await auctionAPI.joinRoom(roomId, nickname.trim())
       if (response.success) {
-        console.log("[v0] Guest joined successfully:", response)
-        console.log(`[v0] hasBidInCurrentRound: ${response.hasBidInCurrentRound}, canBid will be: ${!response.hasBidInCurrentRound}`)
+        console.log("[Dynamic Guest] Guest joined successfully:", response)
         setGuestData(response)
-        setCanBid(!response.hasBidInCurrentRound)
+        setCanBid(true) // 변동입찰에서는 기본적으로 입찰 가능
         setShowJoinModal(false)
         setIsJoining(false)
         toast({
           title: "참여 완료",
-          description: `${response.nickname}님으로 경매에 참여했습니다.`,
+          description: `${response.nickname}님으로 변동입찰 경매에 참여했습니다.`,
         })
       } else {
         setError(response.error || "참여에 실패했습니다.")
@@ -232,10 +258,27 @@ export default function GuestRoom() {
   const handlePlaceBid = async () => {
     if (!guestData) return
 
-    if (!canBid) {
+    console.log("[Dynamic Guest] Place bid check:", {
+      canBid,
+      roundStatus: guestData.roundStatus,
+      capital: guestData.capital,
+      hasBidInCurrentRound: guestData.hasBidInCurrentRound
+    })
+
+    // 변동입찰에서는 canBid 대신 직접 조건 체크
+    if (guestData.roundStatus !== "ACTIVE") {
       toast({
         title: "입찰 불가",
-        description: "이미 이번 라운드에서 입찰하셨습니다.",
+        description: "현재 라운드가 활성화되지 않았습니다.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (guestData.capital <= 0) {
+      toast({
+        title: "입찰 불가",
+        description: "자본이 부족합니다.",
         variant: "destructive",
       })
       return
@@ -260,14 +303,29 @@ export default function GuestRoom() {
       return
     }
 
+    // 변동입찰에서는 현재 최고 입찰가보다 높아야 함
+    if (currentHighestBid && amount <= currentHighestBid.amount) {
+      toast({
+        title: "입찰 불가",
+        description: `현재 최고 입찰가(${currentHighestBid.amount.toLocaleString()}원)보다 높은 금액을 입찰해야 합니다.`,
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsBidding(true)
     
     try {
-      console.log("[Guest] Placing bid:", { roomId, nickname: guestData.nickname, amount })
-      const response = await auctionAPI.placeBid(roomId, guestData.nickname, amount)
-      console.log("[Guest] Bid response:", response)
+      console.log("[Dynamic Guest] Placing bid:", { roomId, nickname: guestData.nickname, amount })
+      const response = await auctionAPI.placeBid(roomId, guestData.nickname, amount, 'dynamic')
+      console.log("[Dynamic Guest] Bid response:", response)
       
       if (response.success) {
+        // 최고 입찰 정보 먼저 업데이트 (실시간 반영)
+        if (response.state?.currentHighestBid) {
+          setCurrentHighestBid(response.state.currentHighestBid)
+        }
+
         // Update guest data immediately with full state
         if (response.state) {
           const currentGuest = response.state.guests.find(g => g.nickname === guestData.nickname)
@@ -280,7 +338,10 @@ export default function GuestRoom() {
               roundStatus: response.state.roundStatus,
               hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
             } : null))
-            setCanBid(!currentGuest.hasBidInCurrentRound)
+            
+            // 변동입찰에서는 항상 입찰 가능 (버튼에서 직접 체크)
+            console.log("[Dynamic Guest] Post-bid dynamic - always setting canBid to true")
+            setCanBid(true)
           }
         } else {
           // Fallback to simple update
@@ -289,18 +350,20 @@ export default function GuestRoom() {
             capital: response.remainingCapital,
             hasBidInCurrentRound: response.hasBidInCurrentRound
           } : null))
-          setCanBid(!response.hasBidInCurrentRound)
+          
+          // 변동입찰에서는 항상 입찰 가능
+          setCanBid(true)
         }
         
         setBidAmount("")
         
-        console.log("[Guest] Bid successful, updated guest data")
+        console.log("[Dynamic Guest] Bid successful, updated guest data")
         toast({
           title: "입찰 완료",
-          description: `입찰이 성공적으로 처리되었습니다. 남은 자본: ${response.remainingCapital.toLocaleString()}원`,
+          description: `변동입찰이 완료되었습니다. 더 높은 금액으로 재입찰 가능합니다. 남은 자본: ${response.remainingCapital?.toLocaleString() || guestData.capital?.toLocaleString()}원`,
         })
       } else {
-        console.log("[Guest] Bid failed:", response.error)
+        console.log("[Dynamic Guest] Bid failed:", response.error)
         toast({
           title: "입찰 실패",
           description: response.error || "입찰에 실패했습니다.",
@@ -308,7 +371,7 @@ export default function GuestRoom() {
         })
       }
     } catch (error) {
-      console.error("[Guest] Failed to place bid:", error)
+      console.error("[Dynamic Guest] Failed to place bid:", error)
       toast({
         title: "연결 오류",
         description: "서버에 연결할 수 없습니다.",
@@ -369,9 +432,9 @@ export default function GuestRoom() {
       <Dialog open={showJoinModal} onOpenChange={setShowJoinModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>경매 참여</DialogTitle>
+            <DialogTitle>변동입찰 경매 참여</DialogTitle>
             <DialogDescription>
-              닉네임을 입력하고 경매에 참여하세요.
+              닉네임을 입력하고 변동입찰 경매에 참여하세요. 실시간 재입찰이 가능합니다.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -398,7 +461,7 @@ export default function GuestRoom() {
               className="w-full"
               disabled={isJoining || !nickname.trim()}
             >
-              {isJoining ? "참여 중..." : "참여하기"}
+              {isJoining ? "참여 중..." : "변동입찰 경매 참여하기"}
             </Button>
           </div>
         </DialogContent>
@@ -413,10 +476,11 @@ export default function GuestRoom() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Wallet className="h-6 w-6" />
-                경매 참여
+                변동입찰 경매 참여
               </CardTitle>
               <CardDescription>
-                안녕하세요, <strong>{guestData.nickname}</strong>님! 경매에 참여하셨습니다.
+                안녕하세요, <strong>{guestData.nickname}</strong>님! 변동입찰 경매에 참여하셨습니다.
+                실시간 재입찰이 가능합니다.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -435,7 +499,7 @@ export default function GuestRoom() {
                 </div>
                 <div className="text-center">
                   <Badge variant={guestData.status === "ACTIVE" ? "default" : "secondary"}>
-                    {guestData.status === "ACTIVE" ? "진행 중" : "대기 중"}
+                    {guestData.status === "ACTIVE" ? "변동입찰 진행 중" : "대기 중"}
                   </Badge>
                   <div className="text-sm text-muted-foreground mt-1">경매 상태</div>
                 </div>
@@ -443,20 +507,62 @@ export default function GuestRoom() {
             </CardContent>
           </Card>
 
+          {/* 변동입찰 최고 입찰 정보 */}
+          {guestData.status === "ACTIVE" && guestData.roundStatus === "ACTIVE" && (
+            <Card className="border-emerald-200 bg-emerald-50/30">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-emerald-700">
+                  <TrendingUp className="h-5 w-5" />
+                  현재 최고 입찰
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {currentHighestBid ? (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-lg font-semibold text-emerald-800">
+                        {currentHighestBid.nickname}
+                      </p>
+                      <p className="text-sm text-muted-foreground">최고 입찰자</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-emerald-600">
+                        {currentHighestBid.amount.toLocaleString()}원
+                      </p>
+                      <p className="text-sm text-muted-foreground">입찰 금액</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground">
+                    <p>아직 입찰자가 없습니다</p>
+                    <p className="text-sm">첫 번째 입찰자가 되어보세요!</p>
+                  </div>
+                )}
+                {/* 변동입찰에서 현재 사용자가 최고 입찰자일 때 알림 */}
+                {currentHighestBid && currentHighestBid.nickname === guestData.nickname && (
+                  <div className="mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-center">
+                    <p className="text-emerald-700 font-semibold">🏆 현재 최고 입찰자입니다!</p>
+                    <p className="text-sm text-emerald-600">더 높은 입찰이 들어올 때까지 1위를 유지하세요.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Bidding Section */}
           {guestData.status === "ACTIVE" && guestData.roundStatus === "ACTIVE" ? (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5" />
-                  입찰하기
+                  변동입찰하기 (실시간 재입찰 가능)
                 </CardTitle>
                 <CardDescription>
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4" />
                     라운드 {guestData.currentRound}이 진행 중입니다
                     <Badge variant="outline">
-                      {guestData.roundStatus === "ACTIVE" ? "입찰 가능" : "입찰 불가"}
+                      {guestData.roundStatus === "ACTIVE" ? "실시간 입찰 가능" : "입찰 불가"}
                     </Badge>
                   </div>
                   <div className="space-y-2">
@@ -464,11 +570,11 @@ export default function GuestRoom() {
                     <Input
                       id="bid-amount"
                       type="number"
-                      placeholder="입찰할 금액을 입력하세요"
+                      placeholder={currentHighestBid ? `${(currentHighestBid.amount + 1).toLocaleString()}원 이상 입력` : "입찰할 금액을 입력하세요"}
                       value={bidAmount}
                       onChange={(e) => setBidAmount(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handlePlaceBid()}
-                      min="1"
+                      min={currentHighestBid ? currentHighestBid.amount + 1 : 1}
                       max={guestData.capital}
                     />
                   </div>
@@ -476,22 +582,21 @@ export default function GuestRoom() {
                     onClick={handlePlaceBid}
                     className="w-full"
                     size="lg"
-                    disabled={isBidding || guestData.capital <= 0 || !canBid}
+                    disabled={
+                      isBidding || 
+                      guestData.capital <= 0 || 
+                      guestData.roundStatus !== "ACTIVE"
+                    }
                   >
                     {isBidding ? "입찰 중..." : 
                      guestData.capital <= 0 ? "자본금 부족" : 
-                     !canBid ? "이미 입찰함" : "입찰하기"}
+                     guestData.roundStatus !== "ACTIVE" ? "라운드 대기 중" : 
+                     (currentHighestBid?.nickname === guestData.nickname ? "더 높은 금액으로 재입찰" : "입찰하기")}
                   </Button>
                   {guestData.capital <= 0 && (
                     <Alert variant="destructive">
                       <AlertCircle className="h-4 w-4" />
                       <AlertDescription>자본금이 모두 소진되었습니다. 더 이상 입찰할 수 없습니다.</AlertDescription>
-                    </Alert>
-                  )}
-                  {!canBid && guestData.capital > 0 && (
-                    <Alert>
-                      <Clock className="h-4 w-4" />
-                      <AlertDescription>이미 이번 라운드에서 입찰하셨습니다. 다음 라운드를 기다려주세요.</AlertDescription>
                     </Alert>
                   )}
                 </CardDescription>
@@ -501,7 +606,7 @@ export default function GuestRoom() {
             <Alert>
               <Clock className="h-4 w-4" />
               <AlertDescription>
-                경매가 시작되었습니다. 호스트가 라운드를 시작하면 입찰할 수 있습니다.
+                변동입찰 경매가 시작되었습니다. 호스트가 라운드를 시작하면 입찰할 수 있습니다.
                 {guestData.currentRound && guestData.currentRound > 0 && (
                   <span className="block mt-2 text-sm">
                     현재 라운드: {guestData.currentRound} | 
@@ -514,7 +619,7 @@ export default function GuestRoom() {
             <Alert>
               <Clock className="h-4 w-4" />
               <AlertDescription>
-                경매가 아직 시작되지 않았습니다. 호스트가 경매를 시작할 때까지 기다려주세요.
+                변동입찰 경매가 아직 시작되지 않았습니다. 호스트가 경매를 시작할 때까지 기다려주세요.
               </AlertDescription>
             </Alert>
           )}
@@ -578,13 +683,14 @@ export default function GuestRoom() {
           {/* Instructions */}
           <Card>
             <CardHeader>
-              <CardTitle>경매 규칙</CardTitle>
+              <CardTitle>변동입찰 경매 규칙</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-muted-foreground">
               <p>• 보유 자본금 내에서만 입찰할 수 있습니다.</p>
-              <p>• 입찰한 금액은 즉시 자본금에서 차감됩니다.</p>
-              <p>• <strong>라운드별로 한 번만 입찰할 수 있습니다.</strong></p>
-              <p>• 모든 입찰은 호스트 화면에 실시간으로 표시됩니다.</p>
+              <p>• <strong>변동입찰: 라운드 중 언제든지 재입찰이 가능합니다.</strong></p>
+              <p>• 더 높은 금액으로만 입찰할 수 있습니다.</p>
+              <p>• 다른 사람이 더 높은 금액을 입찰하면 자동으로 자본금이 환원됩니다.</p>
+              <p>• 모든 입찰은 실시간으로 호스트 화면에 표시됩니다.</p>
               <p>• 경매는 호스트가 시작하고 종료합니다.</p>
             </CardContent>
           </Card>

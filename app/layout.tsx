@@ -5,11 +5,13 @@ import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import { Toaster } from "@/components/ui/toaster"
+import { Header } from "@/components/header"
+import { AuctionItemProvider } from "@/contexts/auction-item-context"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "다시마 경매 - 실시간 경매 시뮬레이션",
-  description: "교육용 실시간 경매 웹 애플리케이션",
+  title: "가치오름 - 실시간 경매 시뮬레이션",
+  description: "모던하고 직관적인 교육용 실시간 경매 플랫폼",
   generator: "v0.app",
 }
 
@@ -21,7 +23,26 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
+        <div className="min-h-screen bg-stone-100 relative overflow-hidden">
+          {/* Subtle pattern */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(139,126,102,0.08)_1px,transparent_0)] bg-[length:24px_24px] opacity-50"></div>
+          
+          <Header />
+          <div className="relative z-10 pt-16">
+            <AuctionItemProvider>
+              <Suspense fallback={
+                <div className="flex items-center justify-center h-64">
+                  <div className="relative">
+                    <div className="animate-spin rounded-full h-10 w-10 border-3 border-emerald-200"></div>
+                    <div className="animate-spin rounded-full h-10 w-10 border-3 border-emerald-500 border-t-transparent absolute top-0 left-0"></div>
+                  </div>
+                </div>
+              }>
+                {children}
+              </Suspense>
+            </AuctionItemProvider>
+          </div>
+        </div>
         <Toaster />
         <Analytics />
       </body>
