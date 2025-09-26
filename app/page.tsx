@@ -23,6 +23,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { auctionAPI } from "@/lib/api"
 import { toast } from "@/hooks/use-toast"
+import { Sidebar } from "@/components/sidebar"
 
 export default function HomePage() {
   const router = useRouter()
@@ -100,7 +101,10 @@ export default function HomePage() {
   ]
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="flex">
+      <Sidebar />
+      <div className="flex-1 p-6">
+        <div className="max-w-5xl mx-auto space-y-8">
       {/* Header */}
       <div className="text-center space-y-6">
         <div className="flex items-center justify-center space-x-3 mb-6">
@@ -307,6 +311,8 @@ export default function HomePage() {
           </div>
         </CardContent>
       </Card>
+        </div>
+      </div>
     </div>
   )
 }

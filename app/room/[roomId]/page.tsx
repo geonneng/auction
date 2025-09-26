@@ -13,6 +13,8 @@ import { Wallet, Clock, TrendingUp, AlertCircle } from "lucide-react"
 import { auctionAPI } from "@/lib/api"
 import type { GuestData, RoundResults } from "@/types/auction"
 import { toast } from "@/hooks/use-toast"
+import { GuestLayout } from "@/components/guest-layout"
+import { AuctionItemProvider } from "@/contexts/auction-item-context"
 
 export default function GuestRoom() {
   const params = useParams()
@@ -362,7 +364,7 @@ export default function GuestRoom() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
+    <div className="min-h-screen">
       {/* Join Modal */}
       <Dialog open={showJoinModal} onOpenChange={setShowJoinModal}>
         <DialogContent className="sm:max-w-md">
@@ -403,7 +405,9 @@ export default function GuestRoom() {
       </Dialog>
 
       {guestData && (
-        <div className="max-w-4xl mx-auto space-y-6">
+        <AuctionItemProvider roomId={roomId}>
+          <GuestLayout roomId={roomId}>
+            <div className="max-w-4xl mx-auto space-y-6">
           {/* Header */}
           <Card>
             <CardHeader>
@@ -584,7 +588,9 @@ export default function GuestRoom() {
               <p>• 경매는 호스트가 시작하고 종료합니다.</p>
             </CardContent>
           </Card>
-        </div>
+            </div>
+          </GuestLayout>
+        </AuctionItemProvider>
       )}
     </div>
   )

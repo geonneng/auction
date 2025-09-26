@@ -5,7 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Clock, Play, Pause, RotateCcw, Timer } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Clock, Play, Pause, RotateCcw, Timer, Package, Eye } from "lucide-react"
+import { useAuctionItem } from "@/contexts/auction-item-context"
 
 interface TimerState {
   isRunning: boolean
@@ -13,7 +15,19 @@ interface TimerState {
   totalTime: number
 }
 
-export function Sidebar() {
+interface AuctionItem {
+  id: string
+  name: string
+  description: string
+  image?: string
+}
+
+interface SidebarProps {
+  roomId?: string
+}
+
+export function Sidebar({ roomId }: SidebarProps = {}) {
+  const { auctionItem } = useAuctionItem()
   const [timer, setTimer] = useState<TimerState>({
     isRunning: false,
     timeLeft: 300, // 5분 기본값
@@ -164,26 +178,72 @@ export function Sidebar() {
         </CardContent>
       </Card>
 
-      {/* 경매 정보 카드 */}
+      {/* 경매 물품 확인 카드 */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">경매 정보</CardTitle>
+          <CardTitle className="text-sm flex items-center space-x-2">
+            <Package className="h-4 w-4" />
+            <span>경매 물품</span>
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <div className="flex justify-between">
-            <span>현재 상태:</span>
-            <Badge variant="outline">대기 중</Badge>
-          </div>
-          <div className="flex justify-between">
-            <span>참가자:</span>
-            <span>0명</span>
-          </div>
-          <div className="flex justify-between">
-            <span>최고가:</span>
-            <span>-</span>
-          </div>
+        <CardContent className="space-y-3">
+          {auctionItem ? (
+            <div className="space-y-3">
+              <div className="text-center">
+                <Badge variant="default" className="text-xs">
+                  등록 완료
+                </Badge>
+              </div>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full">
+                    <Eye className="h-4 w-4 mr-2" />
+                    물품 확인
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center space-x-2">
+                      <Package className="h-5 w-5" />
+                      <span>경매 물품 정보</span>
+                    </DialogTitle>
+                    <DialogDescription>
+                      현재 경매 중인 물품의 상세 정보입니다.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    {auctionItem.image && (
+                      <div className="relative">
+                        <img
+                          src={auctionItem.image}
+                          alt={auctionItem.name}
+                          className="w-full h-48 object-cover rounded-lg"
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <h3 className="font-semibold text-lg mb-2">{auctionItem.name}</h3>
+                      {auctionItem.description && (
+                        <p className="text-sm text-muted-foreground">
+                          {auctionItem.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <Package className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-xs text-muted-foreground">
+                아직 등록된 물품이 없습니다.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
+
     </aside>
   )
 }

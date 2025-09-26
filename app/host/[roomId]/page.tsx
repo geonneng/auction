@@ -13,6 +13,8 @@ import { auctionAPI } from "@/lib/api"
 import type { AuctionState, Bid, HostData, RoundResults } from "@/types/auction"
 import { toast } from "@/hooks/use-toast"
 import QRCodeComponent from "@/components/qr-code"
+import { Sidebar } from "@/components/sidebar"
+import { AuctionItemProvider } from "@/contexts/auction-item-context"
 
 export default function HostDashboard() {
   const params = useParams()
@@ -275,8 +277,12 @@ export default function HostDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-background">
+      <AuctionItemProvider roomId={roomId}>
+        <div className="flex">
+          <Sidebar roomId={roomId} />
+          <div className="flex-1 p-4">
+            <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -341,7 +347,10 @@ export default function HostDashboard() {
                 <Users className="h-6 w-6" />
                 참가자 ({auctionState.guestCount}/6)
               </CardTitle>
-              <CardDescription>현재 접속 중인 게스트들의 목록과 자본금 현황</CardDescription>
+              <CardDescription>
+                현재 접속 중인 게스트들의 목록과 자본금 현황 
+                {auctionState.roundStatus === "ACTIVE" && " (라운드 진행 중 자본금 숨김)"}
+              </CardDescription>
             </CardHeader>
             <CardContent className="h-full">
               {auctionState.guests.length === 0 ? (
@@ -403,12 +412,19 @@ export default function HostDashboard() {
                                 </Button>
                               </div>
                             ) : (
-                              <span>{guest.capital.toLocaleString()}원</span>
+                              // 라운드가 진행 중일 때는 남은 자본 숨김
+                              auctionState.roundStatus === "ACTIVE" ? (
+                                <span className="text-muted-foreground">•••••원</span>
+                              ) : (
+                                <span>{guest.capital.toLocaleString()}원</span>
+                              )
                             )}
                           </TableCell>
                           <TableCell className="text-center">
                             {editingGuest === guest.nickname ? (
                               <span className="text-sm text-muted-foreground">편집 중</span>
+                            ) : auctionState.roundStatus === "ACTIVE" ? (
+                              <span className="text-sm text-muted-foreground">라운드 중</span>
                             ) : (
                               <Button
                                 size="sm"
@@ -603,7 +619,10 @@ export default function HostDashboard() {
             )}
           </CardContent>
         </Card>
-      </div>
+            </div>
+          </div>
+        </div>
+      </AuctionItemProvider>
     </div>
   )
 }

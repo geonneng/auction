@@ -6,7 +6,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import { Toaster } from "@/components/ui/toaster"
 import { Header } from "@/components/header"
-import { Sidebar } from "@/components/sidebar"
+import { AuctionItemProvider } from "@/contexts/auction-item-context"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -29,9 +29,8 @@ export default function RootLayout({
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10"></div>
           
           <Header />
-          <div className="flex relative z-10">
-            <Sidebar />
-            <main className="flex-1 p-6">
+          <div className="relative z-10">
+            <AuctionItemProvider>
               <Suspense fallback={
                 <div className="flex items-center justify-center h-64">
                   <div className="relative">
@@ -42,7 +41,7 @@ export default function RootLayout({
               }>
                 {children}
               </Suspense>
-            </main>
+            </AuctionItemProvider>
           </div>
         </div>
         <Toaster />
