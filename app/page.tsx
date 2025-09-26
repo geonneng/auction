@@ -70,7 +70,7 @@ export default function HomePage() {
     setIsCreating(true)
     
     try {
-      const response = await auctionAPI.createRoom(capital)
+      const response = await auctionAPI.createRoom(capital, auctionData.name.trim())
       if (response.success) {
         console.log("[Create Auction] Room created, redirecting to:", response.roomId)
         setIsCreating(false)

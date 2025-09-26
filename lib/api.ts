@@ -36,12 +36,13 @@ export class AuctionAPI {
     }
   }
 
-  async createRoom(initialCapital: number) {
+  async createRoom(initialCapital: number, auctionName?: string) {
     return this.makeRequest(this.baseUrl, {
       method: 'POST',
       body: JSON.stringify({
         action: 'createRoom',
-        initialCapital
+        initialCapital,
+        auctionName
       })
     })
   }

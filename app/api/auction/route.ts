@@ -8,8 +8,9 @@ console.log("[API] Module loaded, auctionRooms initialized")
 
 // Room data structure
 class AuctionRoom {
-  constructor(id: string, initialCapital: number) {
+  constructor(id: string, initialCapital: number, auctionName?: string) {
     this.id = id
+    this.name = auctionName || "경매"
     this.initialCapital = Number.parseInt(initialCapital.toString())
     this.status = "PRE-START" // PRE-START, ACTIVE, ENDED
     this.host = null
@@ -141,6 +142,7 @@ class AuctionRoom {
   getState() {
     return {
       id: this.id,
+      name: this.name,
       status: this.status,
       initialCapital: this.initialCapital,
       guests: Array.from(this.guests.values()).map((guest) => ({
@@ -205,9 +207,9 @@ export async function POST(request: NextRequest) {
     
     switch (action) {
       case 'createRoom':
-        const { initialCapital } = data
+        const { initialCapital, auctionName } = data
         const roomId = generateRoomId()
-        const room = new AuctionRoom(roomId, initialCapital)
+        const room = new AuctionRoom(roomId, initialCapital, auctionName)
         auctionRooms.set(roomId, room)
         console.log("[API] Created room:", roomId, "with capital:", initialCapital)
         console.log("[API] Available rooms after creation:", Array.from(auctionRooms.keys()))
