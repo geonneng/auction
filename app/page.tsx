@@ -103,7 +103,7 @@ export default function HomePage() {
   return (
     <div>
       <Sidebar />
-      <div className="ml-80 p-6 pt-4">
+      <div className="ml-16 p-6 pt-4">
         <div className="max-w-5xl mx-auto space-y-8">
       {/* Header */}
       <div className="text-center space-y-8">

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Clock, Play, Pause, RotateCcw, Timer, Package, Eye } from "lucide-react"
+import { Clock, Play, Pause, RotateCcw, Timer, Package, Eye, ChevronRight, ChevronLeft } from "lucide-react"
 import { useAuctionItem } from "@/contexts/auction-item-context"
 
 interface TimerState {
@@ -28,6 +28,8 @@ interface SidebarProps {
 
 export function Sidebar({ roomId }: SidebarProps = {}) {
   const { getAllGuests, selectedGuestItem, selectedGuest, setSelectedGuest } = useAuctionItem()
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [expandedSection, setExpandedSection] = useState<'timer' | 'items' | null>(null)
   const [timer, setTimer] = useState<TimerState>({
     isRunning: false,
     timeLeft: 300, // 5분 기본값
@@ -38,7 +40,6 @@ export function Sidebar({ roomId }: SidebarProps = {}) {
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null
-
     if (timer.isRunning && timer.timeLeft > 0) {
       interval = setInterval(() => {
         setTimer(prev => ({
@@ -47,18 +48,10 @@ export function Sidebar({ roomId }: SidebarProps = {}) {
         }))
       }, 1000)
     } else if (timer.timeLeft === 0) {
-      setTimer(prev => ({
-        ...prev,
-        isRunning: false
-      }))
-      // 타이머 완료 알림
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        if (Notification.permission === 'granted') {
-          new Notification('타이머 완료!', {
-            body: '설정된 시간이 완료되었습니다.',
-            icon: '/placeholder-logo.svg'
-          })
-        }
+      setTimer(prev => ({ ...prev, isRunning: false }))
+      // 알림음이나 알림 등을 여기에 추가할 수 있습니다
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification('타이머 종료', { body: '설정한 시간이 끝났습니다!' })
       }
     }
 
@@ -68,10 +61,7 @@ export function Sidebar({ roomId }: SidebarProps = {}) {
   }, [timer.isRunning, timer.timeLeft])
 
   const toggleTimer = () => {
-    setTimer(prev => ({
-      ...prev,
-      isRunning: !prev.isRunning
-    }))
+    setTimer(prev => ({ ...prev, isRunning: !prev.isRunning }))
   }
 
   const resetTimer = () => {
@@ -100,175 +90,245 @@ export function Sidebar({ roomId }: SidebarProps = {}) {
     return ((timer.totalTime - timer.timeLeft) / timer.totalTime) * 100
   }
 
+  const handleSectionToggle = (section: 'timer' | 'items') => {
+    if (expandedSection === section) {
+      setExpandedSection(null)
+      setIsExpanded(false)
+    } else {
+      setExpandedSection(section)
+      setIsExpanded(true)
+    }
+  }
+
   return (
-    <aside className="fixed left-0 top-20 w-80 border-r bg-gradient-to-b from-background/95 to-muted/20 backdrop-blur-sm p-6 space-y-6 shadow-lg h-[calc(100vh-5rem)] overflow-y-auto z-40">
-      <div className="flex items-center space-x-2 mb-6">
-        <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/60 rounded-lg flex items-center justify-center">
-          <Timer className="h-4 w-4 text-primary-foreground" />
-        </div>
-        <h2 className="text-lg font-semibold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">경매 타이머</h2>
-      </div>
+    <>
+      {/* 얇은 아이콘 사이드바 */}
+      <aside className="fixed left-0 top-20 w-16 border-r bg-gradient-to-b from-background/95 to-muted/20 backdrop-blur-sm shadow-lg h-[calc(100vh-5rem)] z-40 flex flex-col items-center py-4 space-y-4">
+        {/* 타이머 아이콘 */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => handleSectionToggle('timer')}
+          className={`w-12 h-12 rounded-xl transition-all duration-200 ${
+            expandedSection === 'timer' ? 'bg-primary/20 text-primary' : 'hover:bg-primary/10'
+          }`}
+          title="타이머"
+        >
+          <Timer className="h-5 w-5" />
+        </Button>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-center text-2xl font-mono">
-            {formatTime(timer.timeLeft)}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* 진행률 바 */}
-          <div className="w-full bg-muted rounded-full h-2">
-            <div 
-              className="bg-primary h-2 rounded-full transition-all duration-1000"
-              style={{ width: `${getProgressPercentage()}%` }}
-            />
-          </div>
+        {/* 물품 관리 아이콘 */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => handleSectionToggle('items')}
+          className={`w-12 h-12 rounded-xl transition-all duration-200 ${
+            expandedSection === 'items' ? 'bg-primary/20 text-primary' : 'hover:bg-primary/10'
+          }`}
+          title="경매 물품"
+        >
+          <Package className="h-5 w-5" />
+        </Button>
+      </aside>
 
-          {/* 타이머 컨트롤 */}
-          <div className="flex space-x-2">
-            <Button 
-              onClick={toggleTimer}
-              variant={timer.isRunning ? "destructive" : "default"}
-              className="flex-1"
+      {/* 확장된 콘텐츠 패널 */}
+      {isExpanded && (
+        <div className="fixed left-16 top-20 w-80 border-r bg-gradient-to-b from-background/95 to-muted/20 backdrop-blur-sm shadow-lg h-[calc(100vh-5rem)] overflow-y-auto z-39 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold">
+              {expandedSection === 'timer' ? '경매 타이머' : '경매 물품'}
+            </h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setIsExpanded(false)
+                setExpandedSection(null)
+              }}
+              className="h-8 w-8"
             >
-              {timer.isRunning ? (
-                <>
-                  <Pause className="h-4 w-4 mr-2" />
-                  일시정지
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4 mr-2" />
-                  시작
-                </>
-              )}
-            </Button>
-            <Button onClick={resetTimer} variant="outline" size="icon">
-              <RotateCcw className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4" />
             </Button>
           </div>
 
-          <Separator />
+          {/* 타이머 섹션 */}
+          {expandedSection === 'timer' && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-center text-2xl font-mono">
+                    {formatTime(timer.timeLeft)}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* 진행률 바 */}
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div 
+                      className="bg-primary h-2 rounded-full transition-all duration-1000"
+                      style={{ width: `${getProgressPercentage()}%` }}
+                    />
+                  </div>
 
-          {/* 프리셋 시간 */}
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-muted-foreground">빠른 설정</h4>
-            <div className="grid grid-cols-2 gap-2">
-              {presetTimes.map((seconds) => (
-                <Button
-                  key={seconds}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPresetTime(seconds)}
-                  className="text-xs"
-                >
-                  {formatTime(seconds)}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          {/* 상태 표시 */}
-          <div className="flex items-center justify-center">
-            <Badge variant={timer.isRunning ? "default" : "secondary"}>
-              <Clock className="h-3 w-3 mr-1" />
-              {timer.isRunning ? "진행 중" : "대기 중"}
-            </Badge>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 게스트별 경매 물품 */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center space-x-2">
-            <Package className="h-4 w-4" />
-            <span>경매 물품</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {getAllGuests().length > 0 ? (
-            <div className="space-y-3">
-              <div className="text-center">
-                <Badge variant="default" className="text-xs">
-                  {getAllGuests().length}명 등록
-                </Badge>
-              </div>
-              
-              {/* 게스트 선택 */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground">게스트 선택</label>
-                <div className="space-y-1">
-                  {getAllGuests().map((guestName) => (
-                    <Button
-                      key={guestName}
-                      variant={selectedGuest === guestName ? "default" : "outline"}
-                      size="sm"
-                      className="w-full justify-start text-xs"
-                      onClick={() => setSelectedGuest(guestName)}
+                  {/* 타이머 컨트롤 */}
+                  <div className="flex space-x-2">
+                    <Button 
+                      onClick={toggleTimer}
+                      variant={timer.isRunning ? "destructive" : "default"}
+                      className="flex-1"
                     >
-                      {guestName}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 선택된 게스트의 물품 표시 */}
-              {selectedGuestItem && (
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="secondary" size="sm" className="w-full">
-                      <Eye className="h-4 w-4 mr-2" />
-                      {selectedGuest}님 물품 확인
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-2xl max-w-4xl">
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center space-x-2 text-xl">
-                        <Package className="h-6 w-6" />
-                        <span>{selectedGuest}님의 경매 물품</span>
-                      </DialogTitle>
-                      <DialogDescription className="text-base">
-                        {selectedGuest}님이 등록한 물품의 상세 정보입니다.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-6">
-                      {selectedGuestItem.image && (
-                        <div className="relative">
-                          <img
-                            src={selectedGuestItem.image}
-                            alt={selectedGuestItem.name}
-                            className="w-full h-80 object-cover rounded-xl shadow-lg"
-                          />
-                        </div>
+                      {timer.isRunning ? (
+                        <>
+                          <Pause className="h-4 w-4 mr-2" />
+                          일시정지
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-4 w-4 mr-2" />
+                          시작
+                        </>
                       )}
-                      <div className="space-y-4">
-                        <h3 className="font-bold text-2xl mb-4 text-center">{selectedGuestItem.name}</h3>
-                        {selectedGuestItem.description && (
-                          <p className="text-lg leading-relaxed text-foreground bg-muted/30 p-4 rounded-lg">
-                            {selectedGuestItem.description}
-                          </p>
-                        )}
-                        <div className="text-sm text-muted-foreground mt-4 text-center border-t pt-4">
-                          등록자: <span className="font-semibold">{selectedGuest}</span>
-                        </div>
-                      </div>
+                    </Button>
+                    <Button onClick={resetTimer} variant="outline" size="icon">
+                      <RotateCcw className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <Separator />
+
+                  {/* 프리셋 시간 */}
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-muted-foreground">빠른 설정</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      {presetTimes.map((seconds) => (
+                        <Button
+                          key={seconds}
+                          onClick={() => setPresetTime(seconds)}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                          disabled={timer.isRunning}
+                        >
+                          <Clock className="h-3 w-3 mr-1" />
+                          {seconds < 60 ? `${seconds}초` : `${Math.floor(seconds / 60)}분`}
+                        </Button>
+                      ))}
                     </div>
-                  </DialogContent>
-                </Dialog>
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <Package className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-xs text-muted-foreground">
-                아직 등록된 물품이 없습니다.
-              </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">타이머 상태</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">현재 상태:</span>
+                    <Badge variant={timer.isRunning ? "default" : "secondary"}>
+                      {timer.isRunning ? "진행 중" : "일시정지"}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">총 시간:</span>
+                    <span className="text-sm font-mono">{formatTime(timer.totalTime)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">진행률:</span>
+                    <Badge variant="outline">
+                      {Math.round(getProgressPercentage())}%
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
-        </CardContent>
-      </Card>
 
-    </aside>
+          {/* 물품 관리 섹션 */}
+          {expandedSection === 'items' && (
+            <div className="space-y-6">
+              {getAllGuests().length > 0 ? (
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <Badge variant="default" className="text-xs">
+                      {getAllGuests().length}명 등록
+                    </Badge>
+                  </div>
+                  
+                  {/* 게스트 선택 */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-muted-foreground">게스트 선택</label>
+                    <div className="space-y-2">
+                      {getAllGuests().map((guestName) => (
+                        <Button
+                          key={guestName}
+                          variant={selectedGuest === guestName ? "default" : "outline"}
+                          size="sm"
+                          className="w-full justify-start text-xs"
+                          onClick={() => setSelectedGuest(guestName)}
+                        >
+                          {guestName}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 선택된 게스트의 물품 표시 */}
+                  {selectedGuestItem && (
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="secondary" size="sm" className="w-full">
+                          <Eye className="h-4 w-4 mr-2" />
+                          {selectedGuest}님 물품 확인
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-2xl max-w-4xl">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center space-x-2 text-xl">
+                            <Package className="h-6 w-6" />
+                            <span>{selectedGuest}님의 경매 물품</span>
+                          </DialogTitle>
+                          <DialogDescription className="text-base">
+                            {selectedGuest}님이 등록한 물품의 상세 정보입니다.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-6">
+                          {selectedGuestItem.image && (
+                            <div className="relative">
+                              <img
+                                src={selectedGuestItem.image}
+                                alt={selectedGuestItem.name}
+                                className="w-full h-80 object-cover rounded-xl shadow-lg"
+                              />
+                            </div>
+                          )}
+                          <div className="space-y-4">
+                            <h3 className="font-bold text-2xl mb-4 text-center">{selectedGuestItem.name}</h3>
+                            {selectedGuestItem.description && (
+                              <p className="text-lg leading-relaxed text-foreground bg-muted/30 p-4 rounded-lg">
+                                {selectedGuestItem.description}
+                              </p>
+                            )}
+                            <div className="text-sm text-muted-foreground mt-4 text-center border-t pt-4">
+                              등록자: <span className="font-semibold">{selectedGuest}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Package className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">
+                    아직 등록된 물품이 없습니다.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </>
   )
 }

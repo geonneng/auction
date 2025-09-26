@@ -281,7 +281,7 @@ export default function HostDashboard() {
       <AuctionItemProvider roomId={roomId}>
         <div>
           <Sidebar roomId={roomId} />
-          <div className="ml-80 p-4 pt-4">
+          <div className="ml-16 p-4 pt-4">
             <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
