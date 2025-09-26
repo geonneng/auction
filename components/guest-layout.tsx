@@ -11,9 +11,9 @@ interface GuestLayoutProps {
 
 export function GuestLayout({ children, roomId, guestName }: GuestLayoutProps) {
   return (
-    <div className="flex relative z-10">
+    <div className="relative z-10">
       <GuestSidebar roomId={roomId} guestName={guestName} />
-      <main className="flex-1 p-6 pt-8">
+      <main className="ml-80 p-6 pt-4">
         {children}
       </main>
     </div>

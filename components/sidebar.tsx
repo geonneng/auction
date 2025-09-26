@@ -101,7 +101,7 @@ export function Sidebar({ roomId }: SidebarProps = {}) {
   }
 
   return (
-    <aside className="w-80 border-r bg-gradient-to-b from-background/95 to-muted/20 backdrop-blur-sm p-6 space-y-6 shadow-lg sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto">
+    <aside className="fixed left-0 top-20 w-80 border-r bg-gradient-to-b from-background/95 to-muted/20 backdrop-blur-sm p-6 space-y-6 shadow-lg h-[calc(100vh-5rem)] overflow-y-auto z-40">
       <div className="flex items-center space-x-2 mb-6">
         <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/60 rounded-lg flex items-center justify-center">
           <Timer className="h-4 w-4 text-primary-foreground" />

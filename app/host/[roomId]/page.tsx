@@ -279,9 +279,9 @@ export default function HostDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <AuctionItemProvider roomId={roomId}>
-        <div className="flex">
+        <div>
           <Sidebar roomId={roomId} />
-          <div className="flex-1 p-4 pt-8">
+          <div className="ml-80 p-4 pt-4">
             <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">

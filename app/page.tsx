@@ -101,9 +101,9 @@ export default function HomePage() {
   ]
 
   return (
-    <div className="flex">
+    <div>
       <Sidebar />
-      <div className="flex-1 p-6 pt-8">
+      <div className="ml-80 p-6 pt-4">
         <div className="max-w-5xl mx-auto space-y-8">
       {/* Header */}
       <div className="text-center space-y-8">

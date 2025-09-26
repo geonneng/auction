@@ -29,7 +29,7 @@ export default function RootLayout({
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10"></div>
           
           <Header />
-          <div className="relative z-10">
+          <div className="relative z-10 pt-20">
             <AuctionItemProvider>
               <Suspense fallback={
                 <div className="flex items-center justify-center h-64">
