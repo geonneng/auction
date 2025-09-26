@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -19,7 +20,6 @@ import {
   Clock,
   Users
 } from "lucide-react"
-import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { auctionAPI } from "@/lib/api"
 import { toast } from "@/hooks/use-toast"
@@ -38,6 +38,15 @@ export default function HomePage() {
     initialCapital: "10000"
   })
   const [isCreating, setIsCreating] = useState(false)
+  const [showWelcomeDialog, setShowWelcomeDialog] = useState(false)
+
+  // 페이지 로드 시 자동으로 사용법 팝업 표시
+  useEffect(() => {
+    const hasSeenWelcome = localStorage.getItem('hasSeenWelcome')
+    if (!hasSeenWelcome) {
+      setShowWelcomeDialog(true)
+    }
+  }, [])
 
   const handleNext = () => {
     if (currentStep < 3) {
@@ -152,7 +161,12 @@ export default function HomePage() {
                   <span className="relative z-10">경매 시작하기</span>
                 </button>
                 
-                <Dialog>
+                <Dialog open={showWelcomeDialog} onOpenChange={(open) => {
+                  setShowWelcomeDialog(open)
+                  if (!open) {
+                    localStorage.setItem('hasSeenWelcome', 'true')
+                  }
+                }}>
                   <DialogTrigger asChild>
                     <button className="group relative px-12 py-5 border-2 border-emerald-600 hover:border-emerald-700 text-emerald-800 hover:text-emerald-900 rounded-xl font-bold text-lg transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 flex items-center justify-center overflow-hidden bg-emerald-50/80 backdrop-blur-sm font-handwriting">
                       <div className="absolute inset-0 bg-emerald-100 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
@@ -160,12 +174,12 @@ export default function HomePage() {
                       <span className="relative z-10">사용법 보기</span>
                     </button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                  <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                      <DialogTitle className="text-2xl font-bold text-emerald-800 text-center">
+                      <DialogTitle className="text-4xl font-bold text-emerald-800 text-center">
                         🎯 가담 - 실시간 경매 시뮬레이션 사용법
                       </DialogTitle>
-                      <DialogDescription className="text-center text-lg">
+                      <DialogDescription className="text-center text-2xl">
                         가치를 이야기하다. 교육용 경매 플랫폼의 모든 기능을 알아보세요
                       </DialogDescription>
                     </DialogHeader>
@@ -173,11 +187,11 @@ export default function HomePage() {
                     <div className="space-y-8 py-4">
                       {/* 변동입찰과 고정입찰 */}
                       <section>
-                        <h3 className="text-xl font-bold text-emerald-700 mb-4">🔒 고정입찰 vs ⚡ 변동입찰</h3>
+                        <h3 className="text-3xl font-bold text-emerald-700 mb-6">🔒 고정입찰 vs ⚡ 변동입찰</h3>
                         <div className="grid md:grid-cols-2 gap-6">
                           <div className="p-4 border border-emerald-200 rounded-lg bg-emerald-50/50">
-                            <h4 className="font-bold text-emerald-800 mb-2">🔒 고정입찰 (Fixed Bidding)</h4>
-                            <ul className="text-sm space-y-1 text-emerald-700">
+                            <h4 className="text-xl font-bold text-emerald-800 mb-3">🔒 고정입찰 (Fixed Bidding)</h4>
+                            <ul className="text-lg space-y-2 text-emerald-700">
                               <li>• 사전에 정해진 가격으로 입찰</li>
                               <li>• 라운드당 1회만 입찰 가능</li>
                               <li>• 입찰 후 재입찰 불가</li>
@@ -187,8 +201,8 @@ export default function HomePage() {
                             </ul>
                           </div>
                           <div className="p-4 border border-blue-200 rounded-lg bg-blue-50/50">
-                            <h4 className="font-bold text-blue-800 mb-2">⚡ 변동입찰 (Dynamic Bidding)</h4>
-                            <ul className="text-sm space-y-1 text-blue-700">
+                            <h4 className="text-xl font-bold text-blue-800 mb-3">⚡ 변동입찰 (Dynamic Bidding)</h4>
+                            <ul className="text-lg space-y-2 text-blue-700">
                               <li>• 실시간으로 가격 조정하며 입찰</li>
                               <li>• 라운드당 여러 번 입찰 가능</li>
                               <li>• 더 높은 금액으로만 재입찰</li>
@@ -202,11 +216,11 @@ export default function HomePage() {
 
                       {/* 사이드바 기능 */}
                       <section>
-                        <h3 className="text-xl font-bold text-emerald-700 mb-4">🎛️ 사이드바 기능</h3>
+                        <h3 className="text-3xl font-bold text-emerald-700 mb-6">🎛️ 사이드바 기능</h3>
                         <div className="grid md:grid-cols-2 gap-6">
                           <div className="p-4 border border-amber-200 rounded-lg bg-amber-50/50">
-                            <h4 className="font-bold text-amber-800 mb-2">🏠 호스트 페이지</h4>
-                            <ul className="text-sm space-y-1 text-amber-700">
+                            <h4 className="text-xl font-bold text-amber-800 mb-3">🏠 호스트 페이지</h4>
+                            <ul className="text-lg space-y-2 text-amber-700">
                               <li>• ⏰ 타이머: 10초~15분 프리셋</li>
                               <li>• 📦 경매물품: 참가자별 물품 조회</li>
                               <li>• 물품 상세 정보 확인</li>
@@ -214,8 +228,8 @@ export default function HomePage() {
                             </ul>
                           </div>
                           <div className="p-4 border border-purple-200 rounded-lg bg-purple-50/50">
-                            <h4 className="font-bold text-purple-800 mb-2">👤 게스트 페이지</h4>
-                            <ul className="text-sm space-y-1 text-purple-700">
+                            <h4 className="text-xl font-bold text-purple-800 mb-3">👤 게스트 페이지</h4>
+                            <ul className="text-lg space-y-2 text-purple-700">
                               <li>• 📦 경매물품 등록</li>
                               <li>• 물품 이름, 설명 입력</li>
                               <li>• 이미지 업로드 (선택)</li>
@@ -227,11 +241,11 @@ export default function HomePage() {
 
                       {/* 경매 생성 및 운영 */}
                       <section>
-                        <h3 className="text-xl font-bold text-emerald-700 mb-4">🚀 경매 생성 및 운영</h3>
+                        <h3 className="text-3xl font-bold text-emerald-700 mb-6">🚀 경매 생성 및 운영</h3>
                         <div className="space-y-4">
                           <div className="p-4 border border-green-200 rounded-lg bg-green-50/50">
-                            <h4 className="font-bold text-green-800 mb-2">📝 경매 생성 과정</h4>
-                            <ol className="text-sm space-y-1 text-green-700">
+                            <h4 className="text-xl font-bold text-green-800 mb-3">📝 경매 생성 과정</h4>
+                            <ol className="text-lg space-y-2 text-green-700">
                               <li>1. 경매 이름 설정 (입력하지 않으면 "다시마 경매")</li>
                               <li>2. 경매 방법 선택 (고정입찰/변동입찰)</li>
                               <li>3. 초기 자본금 설정</li>
@@ -239,8 +253,8 @@ export default function HomePage() {
                             </ol>
                           </div>
                           <div className="p-4 border border-indigo-200 rounded-lg bg-indigo-50/50">
-                            <h4 className="font-bold text-indigo-800 mb-2">🎮 경매 운영 방법</h4>
-                            <div className="grid md:grid-cols-2 gap-4 text-sm">
+                            <h4 className="text-xl font-bold text-indigo-800 mb-3">🎮 경매 운영 방법</h4>
+                            <div className="grid md:grid-cols-2 gap-4 text-lg">
                               <div>
                                 <h5 className="font-semibold text-indigo-700 mb-1">호스트 역할:</h5>
                                 <ul className="space-y-1 text-indigo-600">
