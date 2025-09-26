@@ -24,6 +24,7 @@ import { useRouter } from "next/navigation"
 import { auctionAPI } from "@/lib/api"
 import { toast } from "@/hooks/use-toast"
 import { Sidebar } from "@/components/sidebar"
+import { FloatingElements, PulsatingGradient } from "@/components/ui/floating-elements"
 
 export default function HomePage() {
   const router = useRouter()
@@ -103,41 +104,76 @@ export default function HomePage() {
   return (
     <div>
       <Sidebar />
-      <div className="ml-16 p-6 pt-4">
-        <div className="max-w-5xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="text-center space-y-8">
-        <div className="flex items-center justify-center space-x-4 mb-8">
-          <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-3xl flex items-center justify-center shadow-xl">
-            <Sparkles className="h-10 w-10 text-white" />
-          </div>
-          <h1 className="text-7xl font-bold bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-600 bg-clip-text text-transparent">
-            경매 생성
-          </h1>
-          <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl flex items-center justify-center shadow-xl">
-            <Sparkles className="h-10 w-10 text-white" />
+      <div className="ml-16">
+        {/* Clean Hero Section */}
+        <div className="relative h-[70vh] min-h-[600px] w-full bg-stone-200/60 overflow-hidden">
+          {/* Dynamic Background Elements */}
+          <FloatingElements />
+          <PulsatingGradient />
+          
+          {/* Main content */}
+          <div className="relative z-20 flex items-center justify-center h-full">
+            <div className="text-center space-y-8 max-w-4xl mx-auto px-6">
+              {/* Animated title */}
+              <div className="space-y-6">
+                <div className="inline-block relative">
+                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-emerald-800 tracking-tight animate-fade-in-up">
+                    가치오름
+                  </h1>
+                  <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-3/4 h-1 bg-emerald-500 rounded-full animate-scale-in-delayed"></div>
+                  
+                  {/* Floating decorative elements around title */}
+                  <div className="absolute -top-6 -left-8 w-4 h-4 bg-emerald-400 rounded-full animate-bounce delay-1000"></div>
+                  <div className="absolute -bottom-4 -right-6 w-3 h-3 bg-blue-400 rounded-full animate-bounce delay-1500"></div>
+                  <div className="absolute top-1/2 -left-12 w-2 h-2 bg-purple-400 rounded-full animate-pulse delay-2000"></div>
+                  <div className="absolute top-1/4 -right-10 w-2 h-2 bg-emerald-300 rounded-full animate-pulse delay-2500"></div>
+                </div>
+                <h2 className="text-2xl md:text-3xl font-medium text-emerald-700 tracking-wide animate-fade-in-up delay-500">
+                  실시간 경매 시뮬레이션
+                </h2>
+              </div>
+              
+              
+              {/* Animated CTA buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-center mt-12 animate-fade-in-up delay-700">
+                <button 
+                  onClick={() => {
+                    const formElement = document.getElementById('auction-form');
+                    formElement?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="group px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-700 to-emerald-800 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+                  <Gavel className="w-5 h-5 mr-2 relative z-10" />
+                  <span className="relative z-10">경매 시작하기</span>
+                </button>
+                
+                <button 
+                  onClick={() => router.push('/help')}
+                  className="group px-8 py-4 border-2 border-emerald-300 text-emerald-700 rounded-lg font-semibold text-lg transition-all duration-300 hover:border-emerald-400 hover:bg-emerald-50 flex items-center justify-center relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-emerald-50 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+                  <Target className="w-5 h-5 mr-2 relative z-10" />
+                  <span className="relative z-10">사용법 보기</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-        <p className="text-2xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
-          새로운 경매를 생성하고 참가자들을 초대해보세요
-        </p>
-        <div className="flex items-center justify-center space-x-3">
-          <div className="w-3 h-3 bg-primary rounded-full animate-pulse"></div>
-          <div className="w-3 h-3 bg-primary/60 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-          <div className="w-3 h-3 bg-primary/40 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
-        </div>
-      </div>
+        
+        {/* Form Section */}
+        <div id="auction-form" className="max-w-5xl mx-auto p-6 space-y-8 py-16">{/* Header */}
 
       {/* Progress Steps */}
-      <Card className="bg-gradient-to-r from-emerald-50/50 via-blue-50/50 to-purple-50/50 border-emerald-200/30 shadow-xl backdrop-blur-sm">
+      <Card className="bg-stone-50/90 border-emerald-200/30 shadow-lg">
         <CardContent className="p-10">
           <div className="flex items-center justify-between">
             {steps.map((step, index) => (
               <div key={step.number} className="flex items-center space-x-6">
                 <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-lg font-bold shadow-lg transition-all duration-300 ${
                   currentStep >= step.number 
-                    ? 'bg-gradient-to-br from-emerald-500 to-blue-600 text-white scale-105' 
-                    : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-500 hover:from-gray-200 hover:to-gray-300'
+                    ? 'bg-emerald-600 text-white scale-105' 
+                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                 }`}>
                   {step.number}
                 </div>
@@ -147,7 +183,7 @@ export default function HomePage() {
                 </div>
                 {index < steps.length - 1 && (
                   <div className={`hidden sm:block w-16 h-1 mx-6 rounded-full transition-all duration-300 ${
-                    step.number < currentStep ? 'bg-gradient-to-r from-emerald-400 to-blue-500' : 'bg-gradient-to-r from-gray-200 to-gray-300'
+                    step.number < currentStep ? 'bg-emerald-500' : 'bg-gray-200'
                   }`}></div>
                 )}
               </div>
@@ -157,13 +193,13 @@ export default function HomePage() {
       </Card>
 
       {/* Step Content */}
-      <Card className="min-h-[600px] shadow-2xl border border-emerald-200/20 bg-gradient-to-br from-white/95 to-emerald-50/30 backdrop-blur-lg">
+      <Card className="min-h-[600px] shadow-lg border border-emerald-200/30 bg-stone-50/80">
         <CardHeader className="pb-8">
           <CardTitle className="flex items-center space-x-4 text-3xl">
-            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
               <Settings className="h-6 w-6 text-white" />
             </div>
-            <span className="bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
+            <span className="text-emerald-800">
               {steps[currentStep - 1].title}
             </span>
           </CardTitle>
@@ -200,12 +236,19 @@ export default function HomePage() {
                 onValueChange={(value) => setAuctionData(prev => ({ ...prev, method: value }))}
                 className="space-y-6"
               >
-                <div className="flex items-start space-x-4 p-6 border-2 rounded-xl hover:bg-muted/50 transition-colors shadow-lg bg-background/80 backdrop-blur-sm">
+                <div 
+                  onClick={() => setAuctionData(prev => ({ ...prev, method: 'fixed' }))}
+                  className={`cursor-pointer flex items-start space-x-4 p-6 border-2 rounded-xl transition-colors shadow-md ${
+                    auctionData.method === 'fixed' 
+                      ? 'border-emerald-500 bg-emerald-50/50' 
+                      : 'border-stone-200 bg-stone-50 hover:border-emerald-300 hover:bg-emerald-50/30'
+                  }`}
+                >
                   <RadioGroupItem value="fixed" id="fixed" className="mt-2 scale-125" />
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-3">
-                      <Shield className="h-6 w-6 text-primary" />
-                      <Label htmlFor="fixed" className="text-xl font-semibold">고정입찰</Label>
+                      <Shield className="h-6 w-6 text-emerald-600" />
+                      <Label htmlFor="fixed" className="text-xl font-semibold cursor-pointer">고정입찰</Label>
                     </div>
                     <p className="text-lg text-muted-foreground mb-3">
                       사전에 정해진 가격으로 입찰하는 방식입니다.
@@ -218,12 +261,19 @@ export default function HomePage() {
                   </div>
                 </div>
                 
-                <div className="flex items-start space-x-4 p-6 border-2 rounded-xl hover:bg-muted/50 transition-colors shadow-lg bg-background/80 backdrop-blur-sm">
+                <div 
+                  onClick={() => setAuctionData(prev => ({ ...prev, method: 'dynamic' }))}
+                  className={`cursor-pointer flex items-start space-x-4 p-6 border-2 rounded-xl transition-colors shadow-md ${
+                    auctionData.method === 'dynamic' 
+                      ? 'border-emerald-500 bg-emerald-50/50' 
+                      : 'border-stone-200 bg-stone-50 hover:border-emerald-300 hover:bg-emerald-50/30'
+                  }`}
+                >
                   <RadioGroupItem value="dynamic" id="dynamic" className="mt-2 scale-125" />
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-3">
-                      <Zap className="h-6 w-6 text-primary" />
-                      <Label htmlFor="dynamic" className="text-xl font-semibold">변동입찰</Label>
+                      <Zap className="h-6 w-6 text-emerald-600" />
+                      <Label htmlFor="dynamic" className="text-xl font-semibold cursor-pointer">변동입찰</Label>
                     </div>
                     <p className="text-lg text-muted-foreground mb-3">
                       경매가 진행되면서 가격이 실시간으로 변동하는 방식입니다.
@@ -292,13 +342,13 @@ export default function HomePage() {
               variant="outline" 
               onClick={handlePrev}
               disabled={currentStep === 1}
-              className="text-lg h-12 px-8 shadow-lg"
+              className="text-lg h-12 px-8 shadow-lg border-emerald-200 hover:bg-emerald-50"
             >
               이전
             </Button>
             
             {currentStep < 3 ? (
-              <Button onClick={handleNext} className="text-lg h-12 px-8 shadow-lg">
+              <Button onClick={handleNext} className="bg-emerald-600 hover:bg-emerald-700 text-lg h-12 px-8 shadow-lg">
                 다음
                 <ArrowRight className="h-5 w-5 ml-3" />
               </Button>
@@ -306,7 +356,7 @@ export default function HomePage() {
               <Button 
                 onClick={handleCreateAuction}
                 disabled={isCreating}
-                className="bg-primary hover:bg-primary/90 text-lg h-12 px-8 shadow-lg"
+                className="bg-emerald-600 hover:bg-emerald-700 text-lg h-12 px-8 shadow-lg"
               >
                 {isCreating ? "생성 중..." : "경매 생성하기"}
                 <Gavel className="h-5 w-5 ml-3" />

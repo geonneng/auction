@@ -103,7 +103,7 @@ export function Sidebar({ roomId }: SidebarProps = {}) {
   return (
     <>
       {/* 얇은 아이콘 사이드바 */}
-      <aside className="fixed left-0 top-20 w-16 border-r bg-gradient-to-b from-background/95 to-muted/20 backdrop-blur-sm shadow-lg h-[calc(100vh-5rem)] z-40 flex flex-col items-center py-4 space-y-4">
+      <aside className="fixed left-0 top-16 w-16 border-r border-stone-200 bg-stone-100/95 backdrop-blur-sm shadow-lg h-[calc(100vh-4rem)] z-40 flex flex-col items-center py-4 space-y-4">
         {/* 타이머 아이콘 */}
         <Button
           variant="ghost"
@@ -133,7 +133,7 @@ export function Sidebar({ roomId }: SidebarProps = {}) {
 
       {/* 확장된 콘텐츠 패널 */}
       {isExpanded && (
-        <div className="fixed left-16 top-20 w-80 border-r bg-gradient-to-b from-background/95 to-muted/20 backdrop-blur-sm shadow-lg h-[calc(100vh-5rem)] overflow-y-auto z-39 p-6">
+        <div className="fixed left-16 top-16 w-80 border-r border-stone-200 bg-stone-100/95 backdrop-blur-sm shadow-lg h-[calc(100vh-4rem)] overflow-y-auto z-39 p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold">
               {expandedSection === 'timer' ? '경매 타이머' : '경매 물품'}
@@ -297,7 +297,7 @@ export function Sidebar({ roomId }: SidebarProps = {}) {
                               <img
                                 src={selectedGuestItem.image}
                                 alt={selectedGuestItem.name}
-                                className="w-full h-80 object-cover rounded-xl shadow-lg"
+                                className="w-full h-80 object-contain bg-stone-50 rounded-xl shadow-lg"
                               />
                             </div>
                           )}

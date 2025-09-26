@@ -122,23 +122,20 @@ export default function HelpPage() {
   ]
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="text-center space-y-6">
-        <div className="flex items-center justify-center space-x-3 mb-6">
-          <BookOpen className="h-10 w-10 text-emerald-500" />
-          <h1 className="text-6xl font-bold bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-600 bg-clip-text text-transparent">
+    <div className="max-w-4xl mx-auto px-6 space-y-8">
+      {/* Clean Header */}
+      <div className="text-center space-y-6 py-12 bg-stone-50/50 rounded-2xl border border-emerald-200/30">
+        <div className="flex items-center justify-center space-x-3">
+          <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+            <BookOpen className="h-6 w-6 text-white" />
+          </div>
+          <h1 className="text-5xl font-bold text-emerald-600">
             도움말
           </h1>
-          <BookOpen className="h-10 w-10 text-blue-500" />
         </div>
-        <p className="text-2xl text-muted-foreground max-w-3xl mx-auto">
-          가치오름 플랫폼 사용법과 주요 기능을 자세히 알아보세요
+        <p className="text-xl text-emerald-700 max-w-2xl mx-auto">
+          가치오름 플랫폼 사용법을 알아보세요
         </p>
-        <Badge variant="secondary" className="text-base px-4 py-2">
-          <Lightbulb className="h-4 w-4 mr-2" />
-          사용 가이드
-        </Badge>
       </div>
 
       {/* 주요 기능 */}
@@ -147,7 +144,7 @@ export default function HelpPage() {
           <Settings className="h-8 w-8" />
           <span>주요 기능</span>
         </h2>
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="space-y-6">
           {features.map((feature, index) => (
             <Card key={index} className="hover:shadow-lg transition-shadow">
               <CardHeader>
@@ -157,12 +154,12 @@ export default function HelpPage() {
                   </div>
                   <CardTitle className="text-xl">{feature.title}</CardTitle>
                 </div>
-                <CardDescription className="text-lg">{feature.description}</CardDescription>
+                <CardDescription className="text-lg leading-relaxed">{feature.description}</CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   {feature.details.map((detail, idx) => (
-                    <li key={idx} className="flex items-center space-x-3 text-base">
+                    <li key={idx} className="flex items-start space-x-3 text-base leading-relaxed py-1">
                       <div className="w-2 h-2 bg-primary rounded-full"></div>
                       <span>{detail}</span>
                     </li>
@@ -180,7 +177,7 @@ export default function HelpPage() {
           <Gavel className="h-8 w-8" />
           <span>경매 방법</span>
         </h2>
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="space-y-6">
           {auctionTypes.map((type, index) => (
             <Card key={index} className="border-2 hover:border-primary/40 transition-colors">
               <CardHeader>
@@ -195,9 +192,9 @@ export default function HelpPage() {
               <CardContent>
                 <div className="space-y-3">
                   <h4 className="font-semibold text-base text-muted-foreground">특징</h4>
-                  <ul className="space-y-2">
+                  <ul className="space-y-3">
                     {type.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-center space-x-3 text-base">
+                      <li key={idx} className="flex items-start space-x-3 text-base leading-relaxed py-1">
                         <div className="w-2 h-2 bg-primary rounded-full"></div>
                         <span>{feature}</span>
                       </li>
@@ -229,7 +226,7 @@ export default function HelpPage() {
                     <p className="text-lg text-muted-foreground mb-4">{step.description}</p>
                     <ul className="space-y-1">
                       {step.details.map((detail, idx) => (
-                        <li key={idx} className="flex items-center space-x-3 text-base">
+                        <li key={idx} className="flex items-start space-x-3 text-base leading-relaxed py-1">
                           <div className="w-2 h-2 bg-primary rounded-full"></div>
                           <span>{detail}</span>
                         </li>

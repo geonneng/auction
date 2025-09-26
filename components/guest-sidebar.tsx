@@ -127,7 +127,7 @@ export function GuestSidebar({ roomId, guestName }: GuestSidebarProps) {
   return (
     <>
       {/* 얇은 아이콘 사이드바 */}
-      <aside className="fixed left-0 top-20 w-16 border-r bg-gradient-to-b from-background/95 to-muted/20 backdrop-blur-sm shadow-lg h-[calc(100vh-5rem)] z-40 flex flex-col items-center py-4 space-y-4">
+      <aside className="fixed left-0 top-16 w-16 border-r border-stone-200 bg-stone-100/95 backdrop-blur-sm shadow-lg h-[calc(100vh-4rem)] z-40 flex flex-col items-center py-4 space-y-4">
         {/* 물품 등록 아이콘 */}
         <Button
           variant="ghost"
@@ -189,7 +189,7 @@ export function GuestSidebar({ roomId, guestName }: GuestSidebarProps) {
                     <img
                       src={imagePreview}
                       alt="미리보기"
-                      className="w-full h-48 object-cover rounded-lg"
+                      className="w-full h-48 object-contain bg-stone-50 rounded-lg"
                     />
                     <Button
                       variant="outline"
@@ -281,7 +281,7 @@ export function GuestSidebar({ roomId, guestName }: GuestSidebarProps) {
                   <img
                     src={auctionItem.image}
                     alt={auctionItem.name}
-                    className="w-full h-80 object-cover rounded-xl shadow-lg"
+                    className="w-full h-80 object-contain bg-stone-50 rounded-xl shadow-lg"
                   />
                 </div>
               )}
