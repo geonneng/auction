@@ -287,7 +287,7 @@ export default function HostDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-emerald-600">
-              {auctionState.name ? `${auctionState.name} - 호스트` : '가치오름 - 호스트'}
+              {auctionState.name ? `${auctionState.name} - 호스트` : '가담 - 호스트'}
             </h1>
             <p className="text-muted-foreground">방 ID: {auctionState.id}</p>
             {auctionState.status === "ACTIVE" && (

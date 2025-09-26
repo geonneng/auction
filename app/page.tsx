@@ -24,9 +24,9 @@ import { useRouter } from "next/navigation"
 import { auctionAPI } from "@/lib/api"
 import { toast } from "@/hooks/use-toast"
 import { Sidebar } from "@/components/sidebar"
-import { ModernGrid } from "@/components/ui/modern-grid"
-import { GeometricShapes } from "@/components/ui/geometric-shapes"
-import { ModernGlow } from "@/components/ui/modern-glow"
+import { TraditionalPattern } from "@/components/ui/traditional-pattern"
+import { TraditionalElements } from "@/components/ui/traditional-elements"
+import { TraditionalGlow } from "@/components/ui/traditional-glow"
 
 export default function HomePage() {
   const router = useRouter()
@@ -107,64 +107,70 @@ export default function HomePage() {
     <div>
       <Sidebar />
       <div className="ml-16">
-        {/* Modern Hero Section */}
-        <div className="relative h-[70vh] min-h-[600px] w-full bg-gradient-to-br from-slate-50 via-white to-emerald-50/30 overflow-hidden">
-          {/* Modern Background Elements */}
-          <ModernGrid />
-          <GeometricShapes />
-          <ModernGlow />
+        {/* Traditional Hero Section */}
+        <div className="relative h-[70vh] min-h-[600px] w-full bg-gradient-to-br from-emerald-50/80 via-amber-50/60 to-emerald-100/40 overflow-hidden">
+          {/* Traditional Background Elements */}
+          <TraditionalPattern />
+          <TraditionalElements />
+          <TraditionalGlow />
           
           {/* Main content */}
           <div className="relative z-20 flex items-center justify-center h-full">
             <div className="text-center space-y-12 max-w-5xl mx-auto px-6">
-              {/* Clean Typography */}
+              {/* Traditional Typography */}
               <div className="space-y-8">
                 <div className="inline-block relative">
-                  <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold text-slate-900 tracking-tight animate-scale-in-up">
-                    가치오름
+                  <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold text-emerald-900 tracking-tight animate-scale-in-up">
+                    가담
                   </h1>
-                  <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-2/3 h-0.5 bg-emerald-500 rounded-full animate-scale-in-delayed"></div>
+                  <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-2/3 h-1 bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 rounded-full animate-scale-in-delayed"></div>
+                  
+                  {/* Traditional Decorative Elements */}
+                  <div className="absolute -top-4 -left-4 w-3 h-3 bg-emerald-500 rounded-full animate-pulse-slow"></div>
+                  <div className="absolute -top-4 -right-4 w-3 h-3 bg-emerald-500 rounded-full animate-pulse-slow delay-500"></div>
+                  <div className="absolute -bottom-4 -left-4 w-3 h-3 bg-emerald-500 rounded-full animate-pulse-slow delay-1000"></div>
+                  <div className="absolute -bottom-4 -right-4 w-3 h-3 bg-emerald-500 rounded-full animate-pulse-slow delay-1500"></div>
                 </div>
                 
-                <h2 className="text-2xl md:text-3xl font-light text-slate-600 tracking-wide animate-slide-in-left delay-300">
-                  실시간 경매 시뮬레이션
+                <h2 className="text-2xl md:text-3xl font-medium text-emerald-800 tracking-wide animate-slide-in-left delay-300">
+                  가치를 이야기하다
                 </h2>
               </div>
               
-              {/* Modern CTA Section */}
+              {/* Traditional CTA Section */}
               <div className="flex flex-col sm:flex-row gap-6 justify-center mt-16 animate-scale-in-up delay-700">
                 <button 
                   onClick={() => {
                     const formElement = document.getElementById('auction-form');
                     formElement?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="group relative px-10 py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-semibold text-lg transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 flex items-center justify-center overflow-hidden"
+                  className="group relative px-12 py-5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg font-semibold text-lg transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 flex items-center justify-center overflow-hidden border-2 border-emerald-700"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-700 to-emerald-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
                   <Gavel className="w-5 h-5 mr-3 relative z-10" />
                   <span className="relative z-10">경매 시작하기</span>
                 </button>
                 
                 <button 
                   onClick={() => router.push('/help')}
-                  className="group relative px-10 py-4 border-2 border-slate-200 hover:border-slate-300 text-slate-700 hover:text-slate-900 rounded-2xl font-semibold text-lg transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 flex items-center justify-center overflow-hidden bg-white/50 backdrop-blur-sm"
+                  className="group relative px-12 py-5 border-2 border-emerald-600 hover:border-emerald-700 text-emerald-800 hover:text-emerald-900 rounded-lg font-semibold text-lg transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 flex items-center justify-center overflow-hidden bg-emerald-50/80 backdrop-blur-sm"
                 >
-                  <div className="absolute inset-0 bg-slate-50 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+                  <div className="absolute inset-0 bg-emerald-100 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
                   <Target className="w-5 h-5 mr-3 relative z-10" />
                   <span className="relative z-10">사용법 보기</span>
                 </button>
               </div>
               
-              {/* Clean Feature Pills */}
-              <div className="flex flex-wrap justify-center gap-3 mt-12 animate-fade-in-up delay-1000">
-                <div className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
-                  실시간 입찰
+              {/* Traditional Feature Pills */}
+              <div className="flex flex-wrap justify-center gap-4 mt-12 animate-fade-in-up delay-1000">
+                <div className="px-6 py-3 bg-emerald-100/80 text-emerald-800 rounded-full text-sm font-medium border border-emerald-300">
+                  경매 시뮬레이션
                 </div>
-                <div className="px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                  교육용 설계
+                <div className="px-6 py-3 bg-amber-100/80 text-amber-800 rounded-full text-sm font-medium border border-amber-300">
+                  놀이와 감상
                 </div>
-                <div className="px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
-                  직관적 UI
+                <div className="px-6 py-3 bg-emerald-100/80 text-emerald-800 rounded-full text-sm font-medium border border-emerald-300">
+                  가치와 토론
                 </div>
               </div>
             </div>

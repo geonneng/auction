@@ -10,8 +10,8 @@ import { AuctionItemProvider } from "@/contexts/auction-item-context"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "가치오름 - 실시간 경매 시뮬레이션",
-  description: "모던하고 직관적인 교육용 실시간 경매 플랫폼",
+  title: "가담 - 실시간 경매 시뮬레이션",
+  description: "가치를 이야기하다. 모던하고 직관적인 교육용 실시간 경매 플랫폼",
   generator: "v0.app",
 }
 

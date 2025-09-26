@@ -134,7 +134,7 @@ export default function HelpPage() {
           </h1>
         </div>
         <p className="text-xl text-emerald-700 max-w-2xl mx-auto">
-          가치오름 플랫폼 사용법을 알아보세요
+          가담 플랫폼 사용법을 알아보세요
         </p>
       </div>
 
