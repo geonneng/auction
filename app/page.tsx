@@ -27,6 +27,7 @@ import { Sidebar } from "@/components/sidebar"
 import { TraditionalPattern } from "@/components/ui/traditional-pattern"
 import { TraditionalElements } from "@/components/ui/traditional-elements"
 import { TraditionalGlow } from "@/components/ui/traditional-glow"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
 export default function HomePage() {
   const router = useRouter()
@@ -151,14 +152,133 @@ export default function HomePage() {
                   <span className="relative z-10">경매 시작하기</span>
                 </button>
                 
-                <button 
-                  onClick={() => router.push('/help')}
-                  className="group relative px-12 py-5 border-2 border-emerald-600 hover:border-emerald-700 text-emerald-800 hover:text-emerald-900 rounded-xl font-bold text-lg transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 flex items-center justify-center overflow-hidden bg-emerald-50/80 backdrop-blur-sm font-handwriting"
-                >
-                  <div className="absolute inset-0 bg-emerald-100 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
-                  <Target className="w-5 h-5 mr-3 relative z-10" />
-                  <span className="relative z-10">사용법 보기</span>
-                </button>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <button className="group relative px-12 py-5 border-2 border-emerald-600 hover:border-emerald-700 text-emerald-800 hover:text-emerald-900 rounded-xl font-bold text-lg transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 flex items-center justify-center overflow-hidden bg-emerald-50/80 backdrop-blur-sm font-handwriting">
+                      <div className="absolute inset-0 bg-emerald-100 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+                      <Target className="w-5 h-5 mr-3 relative z-10" />
+                      <span className="relative z-10">사용법 보기</span>
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle className="text-2xl font-bold text-emerald-800 text-center">
+                        🎯 가담 - 실시간 경매 시뮬레이션 사용법
+                      </DialogTitle>
+                      <DialogDescription className="text-center text-lg">
+                        가치를 이야기하다. 교육용 경매 플랫폼의 모든 기능을 알아보세요
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="space-y-8 py-4">
+                      {/* 변동입찰과 고정입찰 */}
+                      <section>
+                        <h3 className="text-xl font-bold text-emerald-700 mb-4">🔒 고정입찰 vs ⚡ 변동입찰</h3>
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <div className="p-4 border border-emerald-200 rounded-lg bg-emerald-50/50">
+                            <h4 className="font-bold text-emerald-800 mb-2">🔒 고정입찰 (Fixed Bidding)</h4>
+                            <ul className="text-sm space-y-1 text-emerald-700">
+                              <li>• 사전에 정해진 가격으로 입찰</li>
+                              <li>• 라운드당 1회만 입찰 가능</li>
+                              <li>• 입찰 후 재입찰 불가</li>
+                              <li>• 자본금에서 즉시 차감</li>
+                              <li>• 명확한 가격 설정</li>
+                              <li>• 계획적 입찰 전략</li>
+                            </ul>
+                          </div>
+                          <div className="p-4 border border-blue-200 rounded-lg bg-blue-50/50">
+                            <h4 className="font-bold text-blue-800 mb-2">⚡ 변동입찰 (Dynamic Bidding)</h4>
+                            <ul className="text-sm space-y-1 text-blue-700">
+                              <li>• 실시간으로 가격 조정하며 입찰</li>
+                              <li>• 라운드당 여러 번 입찰 가능</li>
+                              <li>• 더 높은 금액으로만 재입찰</li>
+                              <li>• 다른 참가자가 더 높게 입찰하면 자동 취소</li>
+                              <li>• 실시간 경쟁</li>
+                              <li>• 역동적인 경매 경험</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </section>
+
+                      {/* 사이드바 기능 */}
+                      <section>
+                        <h3 className="text-xl font-bold text-emerald-700 mb-4">🎛️ 사이드바 기능</h3>
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <div className="p-4 border border-amber-200 rounded-lg bg-amber-50/50">
+                            <h4 className="font-bold text-amber-800 mb-2">🏠 호스트 페이지</h4>
+                            <ul className="text-sm space-y-1 text-amber-700">
+                              <li>• ⏰ 타이머: 10초~15분 프리셋</li>
+                              <li>• 📦 경매물품: 참가자별 물품 조회</li>
+                              <li>• 물품 상세 정보 확인</li>
+                              <li>• 물품 크게 보기 기능</li>
+                            </ul>
+                          </div>
+                          <div className="p-4 border border-purple-200 rounded-lg bg-purple-50/50">
+                            <h4 className="font-bold text-purple-800 mb-2">👤 게스트 페이지</h4>
+                            <ul className="text-sm space-y-1 text-purple-700">
+                              <li>• 📦 경매물품 등록</li>
+                              <li>• 물품 이름, 설명 입력</li>
+                              <li>• 이미지 업로드 (선택)</li>
+                              <li>• 등록/수정 기능</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </section>
+
+                      {/* 경매 생성 및 운영 */}
+                      <section>
+                        <h3 className="text-xl font-bold text-emerald-700 mb-4">🚀 경매 생성 및 운영</h3>
+                        <div className="space-y-4">
+                          <div className="p-4 border border-green-200 rounded-lg bg-green-50/50">
+                            <h4 className="font-bold text-green-800 mb-2">📝 경매 생성 과정</h4>
+                            <ol className="text-sm space-y-1 text-green-700">
+                              <li>1. 경매 이름 설정 (입력하지 않으면 "다시마 경매")</li>
+                              <li>2. 경매 방법 선택 (고정입찰/변동입찰)</li>
+                              <li>3. 초기 자본금 설정</li>
+                              <li>4. 경매 시작 및 참가자 초대</li>
+                            </ol>
+                          </div>
+                          <div className="p-4 border border-indigo-200 rounded-lg bg-indigo-50/50">
+                            <h4 className="font-bold text-indigo-800 mb-2">🎮 경매 운영 방법</h4>
+                            <div className="grid md:grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <h5 className="font-semibold text-indigo-700 mb-1">호스트 역할:</h5>
+                                <ul className="space-y-1 text-indigo-600">
+                                  <li>• 경매 시작 및 참여 링크 공유</li>
+                                  <li>• 라운드 관리 및 타이머 설정</li>
+                                  <li>• 참가자 관리 및 자본금 수정</li>
+                                  <li>• 물품 관리 및 조회</li>
+                                </ul>
+                              </div>
+                              <div>
+                                <h5 className="font-semibold text-indigo-700 mb-1">게스트 역할:</h5>
+                                <ul className="space-y-1 text-indigo-600">
+                                  <li>• 참여 링크로 접속</li>
+                                  <li>• 닉네임 입력 및 물품 등록</li>
+                                  <li>• 입찰 참여 및 자본 관리</li>
+                                  <li>• 물품 정보 관리</li>
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+
+                      {/* 주요 기능 요약 */}
+                      <section>
+                        <h3 className="text-xl font-bold text-emerald-700 mb-4">✨ 주요 기능 요약</h3>
+                        <div className="p-4 border border-emerald-200 rounded-lg bg-emerald-50/50">
+                          <ul className="text-sm space-y-1 text-emerald-700">
+                            <li>• 실시간 경매: 웹소켓 기반 실시간 통신</li>
+                            <li>• 교육용 설계: 경제 원리 학습에 최적화</li>
+                            <li>• 직관적 UI: 사용하기 쉬운 인터페이스</li>
+                            <li>• 무료 사용: 별도 결제 없이 사용 가능</li>
+                          </ul>
+                        </div>
+                      </section>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
               
               {/* Traditional Feature Pills */}
@@ -270,9 +390,10 @@ export default function HomePage() {
                       사전에 정해진 가격으로 입찰하는 방식입니다.
                     </p>
                     <ul className="text-base text-muted-foreground space-y-2">
-                      <li>• 명확한 가격 설정</li>
+                      <li>• 라운드당 1회만 입찰 가능</li>
+                      <li>• 입찰 후 재입찰 불가</li>
+                      <li>• 자본금에서 즉시 차감</li>
                       <li>• 계획적 입찰 전략</li>
-                      <li>• 안정적인 경매 진행</li>
                     </ul>
                   </div>
                 </div>
@@ -292,12 +413,13 @@ export default function HomePage() {
                       <Label htmlFor="dynamic" className="text-xl font-semibold cursor-pointer">변동입찰</Label>
                     </div>
                     <p className="text-lg text-muted-foreground mb-3">
-                      경매가 진행되면서 가격이 실시간으로 변동하는 방식입니다.
+                      실시간으로 가격을 조정하며 입찰하는 방식입니다.
                     </p>
                     <ul className="text-base text-muted-foreground space-y-2">
-                      <li>• 실시간 가격 변동</li>
-                      <li>• 동적 입찰 시스템</li>
-                      <li>• 경쟁적 경매 환경</li>
+                      <li>• 라운드당 여러 번 입찰 가능</li>
+                      <li>• 더 높은 금액으로만 재입찰</li>
+                      <li>• 다른 참가자가 더 높게 입찰하면 자동 취소</li>
+                      <li>• 실시간 경쟁</li>
                     </ul>
                   </div>
                 </div>
