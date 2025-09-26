@@ -182,7 +182,7 @@ export default function HomePage() {
                               <li>• 라운드당 1회만 입찰 가능</li>
                               <li>• 입찰 후 재입찰 불가</li>
                               <li>• 자본금에서 즉시 차감</li>
-                              <li>• 명확한 가격 설정</li>
+                              <li>• 낙찰 실패 시 자본금 환불 없음</li>
                               <li>• 계획적 입찰 전략</li>
                             </ul>
                           </div>

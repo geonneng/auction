@@ -77,7 +77,7 @@ export default function HelpPage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <ArrowRight className="h-4 w-4 mt-0.5 text-emerald-600" />
-                    <span><strong>명확한 가격</strong> 설정</span>
+                    <span>낙찰 실패 시 <strong>자본금 환불 없음</strong></span>
                   </li>
                   <li className="flex items-start gap-2">
                     <ArrowRight className="h-4 w-4 mt-0.5 text-emerald-600" />
