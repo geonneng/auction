@@ -14,7 +14,8 @@ import {
   FileText, 
   Package,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Eye
 } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -173,14 +174,55 @@ export function GuestSidebar({ roomId, guestName }: GuestSidebarProps) {
                   </p>
                 )}
               </div>
-              <Button
-                onClick={handleEditItem}
-                variant="outline"
-                size="sm"
-                className="w-full"
-              >
-                수정하기
-              </Button>
+              <div className="flex space-x-2">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="flex-1">
+                      <Eye className="h-4 w-4 mr-2" />
+                      크게 보기
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-2xl max-w-4xl">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center space-x-2 text-xl">
+                        <Package className="h-6 w-6" />
+                        <span>내 경매 물품 정보</span>
+                      </DialogTitle>
+                      <DialogDescription className="text-base">
+                        현재 등록된 물품의 상세 정보입니다.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-6">
+                      {auctionItem.image && (
+                        <div className="relative">
+                          <img
+                            src={auctionItem.image}
+                            alt={auctionItem.name}
+                            className="w-full h-80 object-cover rounded-xl shadow-lg"
+                          />
+                        </div>
+                      )}
+                      <div className="space-y-4">
+                        <h3 className="font-bold text-2xl mb-4 text-center">{auctionItem.name}</h3>
+                        {auctionItem.description && (
+                          <p className="text-lg leading-relaxed text-foreground bg-muted/30 p-4 rounded-lg">
+                            {auctionItem.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                
+                <Button
+                  onClick={handleEditItem}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                >
+                  수정하기
+                </Button>
+              </div>
             </div>
           ) : isEditingItem ? (
             <div className="space-y-4">

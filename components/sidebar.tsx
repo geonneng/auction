@@ -222,35 +222,35 @@ export function Sidebar({ roomId }: SidebarProps = {}) {
                       {selectedGuest}님 물품 확인
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
+                  <DialogContent className="sm:max-w-2xl max-w-4xl">
                     <DialogHeader>
-                      <DialogTitle className="flex items-center space-x-2">
-                        <Package className="h-5 w-5" />
+                      <DialogTitle className="flex items-center space-x-2 text-xl">
+                        <Package className="h-6 w-6" />
                         <span>{selectedGuest}님의 경매 물품</span>
                       </DialogTitle>
-                      <DialogDescription>
+                      <DialogDescription className="text-base">
                         {selectedGuest}님이 등록한 물품의 상세 정보입니다.
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                       {selectedGuestItem.image && (
                         <div className="relative">
                           <img
                             src={selectedGuestItem.image}
                             alt={selectedGuestItem.name}
-                            className="w-full h-48 object-cover rounded-lg"
+                            className="w-full h-80 object-cover rounded-xl shadow-lg"
                           />
                         </div>
                       )}
-                      <div>
-                        <h3 className="font-semibold text-lg mb-2">{selectedGuestItem.name}</h3>
+                      <div className="space-y-4">
+                        <h3 className="font-bold text-2xl mb-4 text-center">{selectedGuestItem.name}</h3>
                         {selectedGuestItem.description && (
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-lg leading-relaxed text-foreground bg-muted/30 p-4 rounded-lg">
                             {selectedGuestItem.description}
                           </p>
                         )}
-                        <div className="text-xs text-muted-foreground mt-2">
-                          등록자: {selectedGuest}
+                        <div className="text-sm text-muted-foreground mt-4 text-center border-t pt-4">
+                          등록자: <span className="font-semibold">{selectedGuest}</span>
                         </div>
                       </div>
                     </div>
