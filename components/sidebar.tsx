@@ -27,7 +27,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ roomId }: SidebarProps = {}) {
-  const { auctionItem } = useAuctionItem()
+  const { getAllGuests, selectedGuestItem, selectedGuest, setSelectedGuest } = useAuctionItem()
   const [timer, setTimer] = useState<TimerState>({
     isRunning: false,
     timeLeft: 300, // 5분 기본값
@@ -101,7 +101,7 @@ export function Sidebar({ roomId }: SidebarProps = {}) {
   }
 
   return (
-    <aside className="w-80 border-r bg-gradient-to-b from-background/95 to-muted/20 backdrop-blur-sm p-6 space-y-6 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto shadow-lg">
+    <aside className="w-80 border-r bg-gradient-to-b from-background/95 to-muted/20 backdrop-blur-sm p-6 space-y-6 shadow-lg min-h-screen">
       <div className="flex items-center space-x-2 mb-6">
         <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/60 rounded-lg flex items-center justify-center">
           <Timer className="h-4 w-4 text-primary-foreground" />
@@ -178,7 +178,7 @@ export function Sidebar({ roomId }: SidebarProps = {}) {
         </CardContent>
       </Card>
 
-      {/* 경매 물품 확인 카드 */}
+      {/* 게스트별 경매 물품 */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center space-x-2">
@@ -187,51 +187,76 @@ export function Sidebar({ roomId }: SidebarProps = {}) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {auctionItem ? (
+          {getAllGuests().length > 0 ? (
             <div className="space-y-3">
               <div className="text-center">
                 <Badge variant="default" className="text-xs">
-                  등록 완료
+                  {getAllGuests().length}명 등록
                 </Badge>
               </div>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="w-full">
-                    <Eye className="h-4 w-4 mr-2" />
-                    물품 확인
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center space-x-2">
-                      <Package className="h-5 w-5" />
-                      <span>경매 물품 정보</span>
-                    </DialogTitle>
-                    <DialogDescription>
-                      현재 경매 중인 물품의 상세 정보입니다.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    {auctionItem.image && (
-                      <div className="relative">
-                        <img
-                          src={auctionItem.image}
-                          alt={auctionItem.name}
-                          className="w-full h-48 object-cover rounded-lg"
-                        />
-                      </div>
-                    )}
-                    <div>
-                      <h3 className="font-semibold text-lg mb-2">{auctionItem.name}</h3>
-                      {auctionItem.description && (
-                        <p className="text-sm text-muted-foreground">
-                          {auctionItem.description}
-                        </p>
+              
+              {/* 게스트 선택 */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">게스트 선택</label>
+                <div className="space-y-1">
+                  {getAllGuests().map((guestName) => (
+                    <Button
+                      key={guestName}
+                      variant={selectedGuest === guestName ? "default" : "outline"}
+                      size="sm"
+                      className="w-full justify-start text-xs"
+                      onClick={() => setSelectedGuest(guestName)}
+                    >
+                      {guestName}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 선택된 게스트의 물품 표시 */}
+              {selectedGuestItem && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="secondary" size="sm" className="w-full">
+                      <Eye className="h-4 w-4 mr-2" />
+                      {selectedGuest}님 물품 확인
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center space-x-2">
+                        <Package className="h-5 w-5" />
+                        <span>{selectedGuest}님의 경매 물품</span>
+                      </DialogTitle>
+                      <DialogDescription>
+                        {selectedGuest}님이 등록한 물품의 상세 정보입니다.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      {selectedGuestItem.image && (
+                        <div className="relative">
+                          <img
+                            src={selectedGuestItem.image}
+                            alt={selectedGuestItem.name}
+                            className="w-full h-48 object-cover rounded-lg"
+                          />
+                        </div>
                       )}
+                      <div>
+                        <h3 className="font-semibold text-lg mb-2">{selectedGuestItem.name}</h3>
+                        {selectedGuestItem.description && (
+                          <p className="text-sm text-muted-foreground">
+                            {selectedGuestItem.description}
+                          </p>
+                        )}
+                        <div className="text-xs text-muted-foreground mt-2">
+                          등록자: {selectedGuest}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
           ) : (
             <div className="text-center py-4">

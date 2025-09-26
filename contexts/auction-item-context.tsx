@@ -13,10 +13,14 @@ interface AuctionItem {
 }
 
 interface AuctionItemContextType {
-  auctionItem: AuctionItem | null
-  setAuctionItem: (item: AuctionItem | null) => void
-  saveAuctionItem: (item: Omit<AuctionItem, 'id' | 'createdAt'>) => Promise<void>
-  loadAuctionItem: (roomId?: string) => Promise<void>
+  auctionItems: { [guestName: string]: AuctionItem }
+  selectedGuestItem: AuctionItem | null
+  selectedGuest: string | null
+  setSelectedGuest: (guestName: string | null) => void
+  saveAuctionItem: (item: Omit<AuctionItem, 'id' | 'createdAt'>, guestName: string) => Promise<void>
+  loadAuctionItems: (roomId?: string) => Promise<void>
+  getGuestItem: (guestName: string) => AuctionItem | null
+  getAllGuests: () => string[]
   isLoading: boolean
 }
 
@@ -36,36 +40,42 @@ interface AuctionItemProviderProps {
 }
 
 export function AuctionItemProvider({ children, roomId }: AuctionItemProviderProps) {
-  const [auctionItem, setAuctionItem] = useState<AuctionItem | null>(null)
+  const [auctionItems, setAuctionItems] = useState<{ [guestName: string]: AuctionItem }>({})
+  const [selectedGuest, setSelectedGuest] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
   // localStorage 키 생성
   const getStorageKey = (id?: string) => {
-    return id ? `auction-item-${id}` : 'auction-item-global'
+    return id ? `auction-items-${id}` : 'auction-items-global'
   }
 
   // 물품 정보 저장
-  const saveAuctionItem = useCallback(async (item: Omit<AuctionItem, 'id' | 'createdAt'>) => {
+  const saveAuctionItem = useCallback(async (item: Omit<AuctionItem, 'id' | 'createdAt'>, guestName: string) => {
     setIsLoading(true)
     try {
       const newItem: AuctionItem = {
         ...item,
         id: Date.now().toString(),
         createdAt: new Date().toISOString(),
-        roomId: roomId || item.roomId
+        roomId: roomId || item.roomId,
+        createdBy: guestName
       }
+
+      // 상태 업데이트
+      setAuctionItems(prev => ({
+        ...prev,
+        [guestName]: newItem
+      }))
 
       // localStorage에 저장
       const storageKey = getStorageKey(roomId)
-      localStorage.setItem(storageKey, JSON.stringify(newItem))
-      
-      // 상태 업데이트
-      setAuctionItem(newItem)
+      const updatedItems = { ...auctionItems, [guestName]: newItem }
+      localStorage.setItem(storageKey, JSON.stringify(updatedItems))
 
       // 다른 탭/창에 변경사항 알림
       window.dispatchEvent(new StorageEvent('storage', {
         key: storageKey,
-        newValue: JSON.stringify(newItem)
+        newValue: JSON.stringify(updatedItems)
       }))
 
     } catch (error) {
@@ -74,33 +84,46 @@ export function AuctionItemProvider({ children, roomId }: AuctionItemProviderPro
     } finally {
       setIsLoading(false)
     }
-  }, [roomId])
+  }, [roomId, auctionItems])
 
   // 물품 정보 불러오기
-  const loadAuctionItem = useCallback(async (targetRoomId?: string) => {
+  const loadAuctionItems = useCallback(async (targetRoomId?: string) => {
     setIsLoading(true)
     try {
       const storageKey = getStorageKey(targetRoomId || roomId)
-      const storedItem = localStorage.getItem(storageKey)
+      const storedItems = localStorage.getItem(storageKey)
       
-      if (storedItem) {
-        const item = JSON.parse(storedItem) as AuctionItem
-        setAuctionItem(item)
+      if (storedItems) {
+        const items = JSON.parse(storedItems) as { [guestName: string]: AuctionItem }
+        setAuctionItems(items)
       } else {
-        setAuctionItem(null)
+        setAuctionItems({})
       }
     } catch (error) {
-      console.error('Failed to load auction item:', error)
-      setAuctionItem(null)
+      console.error('Failed to load auction items:', error)
+      setAuctionItems({})
     } finally {
       setIsLoading(false)
     }
   }, [roomId])
 
+  // 특정 게스트의 물품 가져오기
+  const getGuestItem = useCallback((guestName: string) => {
+    return auctionItems[guestName] || null
+  }, [auctionItems])
+
+  // 모든 게스트 목록 가져오기
+  const getAllGuests = useCallback(() => {
+    return Object.keys(auctionItems)
+  }, [auctionItems])
+
+  // 선택된 게스트의 물품
+  const selectedGuestItem = selectedGuest ? auctionItems[selectedGuest] || null : null
+
   // 초기 로드
   useEffect(() => {
-    loadAuctionItem()
-  }, [loadAuctionItem])
+    loadAuctionItems()
+  }, [loadAuctionItems])
 
   // storage 변경 감지 (다른 탭에서 변경된 경우)
   useEffect(() => {
@@ -108,8 +131,8 @@ export function AuctionItemProvider({ children, roomId }: AuctionItemProviderPro
       const storageKey = getStorageKey(roomId)
       if (e.key === storageKey && e.newValue) {
         try {
-          const item = JSON.parse(e.newValue) as AuctionItem
-          setAuctionItem(item)
+          const items = JSON.parse(e.newValue) as { [guestName: string]: AuctionItem }
+          setAuctionItems(items)
         } catch (error) {
           console.error('Failed to parse storage change:', error)
         }
@@ -134,10 +157,14 @@ export function AuctionItemProvider({ children, roomId }: AuctionItemProviderPro
   }, [roomId])
 
   const value: AuctionItemContextType = {
-    auctionItem,
-    setAuctionItem,
+    auctionItems,
+    selectedGuestItem,
+    selectedGuest,
+    setSelectedGuest,
     saveAuctionItem,
-    loadAuctionItem,
+    loadAuctionItems,
+    getGuestItem,
+    getAllGuests,
     isLoading
   }
 

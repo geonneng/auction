@@ -30,10 +30,12 @@ interface AuctionItem {
 
 interface GuestSidebarProps {
   roomId: string
+  guestName?: string
 }
 
-export function GuestSidebar({ roomId }: GuestSidebarProps) {
-  const { auctionItem, saveAuctionItem, isLoading } = useAuctionItem()
+export function GuestSidebar({ roomId, guestName }: GuestSidebarProps) {
+  const { getGuestItem, saveAuctionItem, isLoading } = useAuctionItem()
+  const auctionItem = guestName ? getGuestItem(guestName) : null
   const [isEditingItem, setIsEditingItem] = useState(false)
   const [itemName, setItemName] = useState("")
   const [itemDescription, setItemDescription] = useState("")
@@ -79,6 +81,15 @@ export function GuestSidebar({ roomId }: GuestSidebarProps) {
       })
       return
     }
+
+    if (!guestName) {
+      toast({
+        title: "오류",
+        description: "게스트 정보를 찾을 수 없습니다.",
+        variant: "destructive",
+      })
+      return
+    }
     
     try {
       await saveAuctionItem({
@@ -86,7 +97,7 @@ export function GuestSidebar({ roomId }: GuestSidebarProps) {
         description: itemDescription.trim(),
         image: imagePreview || undefined,
         roomId: roomId
-      })
+      }, guestName)
       
       setIsEditingItem(false)
       setItemName("")
@@ -125,7 +136,7 @@ export function GuestSidebar({ roomId }: GuestSidebarProps) {
   }
 
   return (
-    <aside className="w-80 border-r bg-gradient-to-b from-background/95 to-muted/20 backdrop-blur-sm p-6 space-y-6 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto shadow-lg">
+    <aside className="w-80 border-r bg-gradient-to-b from-background/95 to-muted/20 backdrop-blur-sm p-6 space-y-6 shadow-lg min-h-screen">
       <div className="flex items-center space-x-2 mb-6">
         <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/60 rounded-lg flex items-center justify-center">
           <Package className="h-4 w-4 text-primary-foreground" />

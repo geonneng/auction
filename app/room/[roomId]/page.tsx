@@ -406,7 +406,7 @@ export default function GuestRoom() {
 
       {guestData && (
         <AuctionItemProvider roomId={roomId}>
-          <GuestLayout roomId={roomId}>
+          <GuestLayout roomId={roomId} guestName={guestData.nickname}>
             <div className="max-w-4xl mx-auto space-y-6">
           {/* Header */}
           <Card>
