@@ -387,7 +387,7 @@ export default function HomePage() {
                       <Label htmlFor="fixed" className="text-xl font-semibold cursor-pointer">고정입찰</Label>
                     </div>
                     <p className="text-lg text-muted-foreground mb-3">
-                      사전에 정해진 가격으로 입찰하는 방식입니다.
+                      처음 결정한 가격으로 참가자들과 비교하여 입찰하는 방식입니다.
                     </p>
                     <ul className="text-base text-muted-foreground space-y-2">
                       <li>• 라운드당 1회만 입찰 가능</li>
