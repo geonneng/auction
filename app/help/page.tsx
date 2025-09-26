@@ -124,27 +124,27 @@ export default function HelpPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="text-center space-y-4">
-        <div className="flex items-center justify-center space-x-2 mb-4">
-          <BookOpen className="h-8 w-8 text-primary" />
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+      <div className="text-center space-y-6">
+        <div className="flex items-center justify-center space-x-3 mb-6">
+          <BookOpen className="h-10 w-10 text-primary" />
+          <h1 className="text-6xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
             도움말
           </h1>
-          <BookOpen className="h-8 w-8 text-primary" />
+          <BookOpen className="h-10 w-10 text-primary" />
         </div>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+        <p className="text-2xl text-muted-foreground max-w-3xl mx-auto">
           다시마 경매 사용법과 주요 기능을 자세히 알아보세요
         </p>
-        <Badge variant="secondary" className="text-sm">
-          <Lightbulb className="h-3 w-3 mr-1" />
+        <Badge variant="secondary" className="text-base px-4 py-2">
+          <Lightbulb className="h-4 w-4 mr-2" />
           사용 가이드
         </Badge>
       </div>
 
       {/* 주요 기능 */}
       <section>
-        <h2 className="text-2xl font-bold mb-6 flex items-center space-x-2">
-          <Settings className="h-6 w-6" />
+        <h2 className="text-3xl font-bold mb-8 flex items-center space-x-3">
+          <Settings className="h-8 w-8" />
           <span>주요 기능</span>
         </h2>
         <div className="grid md:grid-cols-2 gap-6">
@@ -155,15 +155,15 @@ export default function HelpPage() {
                   <div className="text-primary">
                     {feature.icon}
                   </div>
-                  <CardTitle className="text-lg">{feature.title}</CardTitle>
+                  <CardTitle className="text-xl">{feature.title}</CardTitle>
                 </div>
-                <CardDescription>{feature.description}</CardDescription>
+                <CardDescription className="text-lg">{feature.description}</CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
                   {feature.details.map((detail, idx) => (
-                    <li key={idx} className="flex items-center space-x-2 text-sm">
-                      <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                    <li key={idx} className="flex items-center space-x-3 text-base">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
                       <span>{detail}</span>
                     </li>
                   ))}
@@ -176,8 +176,8 @@ export default function HelpPage() {
 
       {/* 경매 방법 */}
       <section>
-        <h2 className="text-2xl font-bold mb-6 flex items-center space-x-2">
-          <Gavel className="h-6 w-6" />
+        <h2 className="text-3xl font-bold mb-8 flex items-center space-x-3">
+          <Gavel className="h-8 w-8" />
           <span>경매 방법</span>
         </h2>
         <div className="grid md:grid-cols-2 gap-6">
@@ -194,11 +194,11 @@ export default function HelpPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-muted-foreground">특징</h4>
+                  <h4 className="font-semibold text-base text-muted-foreground">특징</h4>
                   <ul className="space-y-2">
                     {type.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-center space-x-2 text-sm">
-                        <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                      <li key={idx} className="flex items-center space-x-3 text-base">
+                        <div className="w-2 h-2 bg-primary rounded-full"></div>
                         <span>{feature}</span>
                       </li>
                     ))}
@@ -212,8 +212,8 @@ export default function HelpPage() {
 
       {/* 사용 방법 */}
       <section>
-        <h2 className="text-2xl font-bold mb-6 flex items-center space-x-2">
-          <Target className="h-6 w-6" />
+        <h2 className="text-3xl font-bold mb-8 flex items-center space-x-3">
+          <Target className="h-8 w-8" />
           <span>사용 방법</span>
         </h2>
         <div className="space-y-6">
@@ -221,16 +221,16 @@ export default function HelpPage() {
             <Card key={index} className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
               <CardContent className="p-6">
                 <div className="flex items-start space-x-4">
-                  <div className="w-10 h-10 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0">
+                  <div className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xl font-bold flex-shrink-0">
                     {step.number}
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
-                    <p className="text-muted-foreground mb-4">{step.description}</p>
+                    <h3 className="text-2xl font-semibold mb-3">{step.title}</h3>
+                    <p className="text-lg text-muted-foreground mb-4">{step.description}</p>
                     <ul className="space-y-1">
                       {step.details.map((detail, idx) => (
-                        <li key={idx} className="flex items-center space-x-2 text-sm">
-                          <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                        <li key={idx} className="flex items-center space-x-3 text-base">
+                          <div className="w-2 h-2 bg-primary rounded-full"></div>
                           <span>{detail}</span>
                         </li>
                       ))}
@@ -246,16 +246,16 @@ export default function HelpPage() {
       {/* 추가 정보 */}
       <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Globe className="h-5 w-5" />
+          <CardTitle className="flex items-center space-x-3 text-2xl">
+            <Globe className="h-6 w-6" />
             <span>추가 정보</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4 text-sm">
+          <div className="grid md:grid-cols-2 gap-6 text-base">
             <div>
-              <h4 className="font-semibold mb-2">지원 브라우저</h4>
-              <p className="text-muted-foreground">Chrome, Firefox, Safari, Edge 최신 버전</p>
+              <h4 className="font-semibold mb-3 text-lg">지원 브라우저</h4>
+              <p className="text-muted-foreground text-lg">Chrome, Firefox, Safari, Edge 최신 버전</p>
             </div>
             <div>
               <h4 className="font-semibold mb-2">권장 환경</h4>

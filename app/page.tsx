@@ -106,35 +106,35 @@ export default function HomePage() {
       <div className="flex-1 p-6">
         <div className="max-w-5xl mx-auto space-y-8">
       {/* Header */}
-      <div className="text-center space-y-6">
-        <div className="flex items-center justify-center space-x-3 mb-6">
-          <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/60 rounded-2xl flex items-center justify-center shadow-lg">
-            <Sparkles className="h-6 w-6 text-primary-foreground" />
+      <div className="text-center space-y-8">
+        <div className="flex items-center justify-center space-x-4 mb-8">
+          <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/60 rounded-2xl flex items-center justify-center shadow-lg">
+            <Sparkles className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
+          <h1 className="text-7xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
             경매 생성
           </h1>
-          <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/60 rounded-2xl flex items-center justify-center shadow-lg">
-            <Sparkles className="h-6 w-6 text-primary-foreground" />
+          <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/60 rounded-2xl flex items-center justify-center shadow-lg">
+            <Sparkles className="h-8 w-8 text-primary-foreground" />
           </div>
         </div>
-        <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+        <p className="text-2xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
           새로운 경매를 생성하고 참가자들을 초대해보세요
         </p>
-        <div className="flex items-center justify-center space-x-2">
-          <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-          <div className="w-2 h-2 bg-primary/60 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-          <div className="w-2 h-2 bg-primary/40 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+        <div className="flex items-center justify-center space-x-3">
+          <div className="w-3 h-3 bg-primary rounded-full animate-pulse"></div>
+          <div className="w-3 h-3 bg-primary/60 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+          <div className="w-3 h-3 bg-primary/40 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
         </div>
       </div>
 
       {/* Progress Steps */}
       <Card className="bg-gradient-to-r from-primary/5 via-primary/8 to-primary/10 border-primary/20 shadow-lg backdrop-blur-sm">
-        <CardContent className="p-8">
+        <CardContent className="p-10">
           <div className="flex items-center justify-between">
             {steps.map((step, index) => (
-              <div key={step.number} className="flex items-center space-x-4">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-bold shadow-lg transition-all duration-300 ${
+              <div key={step.number} className="flex items-center space-x-6">
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-lg font-bold shadow-lg transition-all duration-300 ${
                   currentStep >= step.number 
                     ? 'bg-gradient-to-br from-primary to-primary/80 text-primary-foreground scale-105' 
                     : 'bg-muted/50 text-muted-foreground hover:bg-muted/80'
@@ -142,11 +142,11 @@ export default function HomePage() {
                   {step.number}
                 </div>
                 <div className="hidden sm:block">
-                  <h3 className="font-semibold text-sm">{step.title}</h3>
-                  <p className="text-xs text-muted-foreground">{step.description}</p>
+                  <h3 className="font-semibold text-lg">{step.title}</h3>
+                  <p className="text-base text-muted-foreground">{step.description}</p>
                 </div>
                 {index < steps.length - 1 && (
-                  <div className="hidden sm:block w-12 h-0.5 bg-gradient-to-r from-muted to-muted/50 mx-4"></div>
+                  <div className="hidden sm:block w-16 h-1 bg-gradient-to-r from-muted to-muted/50 mx-6 rounded-full"></div>
                 )}
               </div>
             ))}
@@ -155,33 +155,34 @@ export default function HomePage() {
       </Card>
 
       {/* Step Content */}
-      <Card className="min-h-[500px] shadow-xl border-0 bg-gradient-to-br from-background/95 to-muted/20 backdrop-blur-sm">
-        <CardHeader className="pb-6">
-          <CardTitle className="flex items-center space-x-3 text-2xl">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/60 rounded-xl flex items-center justify-center shadow-lg">
-              <Settings className="h-5 w-5 text-primary-foreground" />
+      <Card className="min-h-[600px] shadow-xl border-0 bg-gradient-to-br from-background/95 to-muted/20 backdrop-blur-sm">
+        <CardHeader className="pb-8">
+          <CardTitle className="flex items-center space-x-4 text-3xl">
+            <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/60 rounded-xl flex items-center justify-center shadow-lg">
+              <Settings className="h-6 w-6 text-primary-foreground" />
             </div>
             <span className="bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
               {steps[currentStep - 1].title}
             </span>
           </CardTitle>
-          <CardDescription className="text-base text-muted-foreground/80">
+          <CardDescription className="text-xl text-muted-foreground/80">
             {steps[currentStep - 1].description}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Step 1: Auction Name */}
           {currentStep === 1 && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="auction-name">경매 이름</Label>
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <Label htmlFor="auction-name" className="text-xl font-semibold">경매 이름</Label>
                 <Input
                   id="auction-name"
                   placeholder="예: 2024년 1학기 경제학 경매"
                   value={auctionData.name}
                   onChange={(e) => setAuctionData(prev => ({ ...prev, name: e.target.value }))}
+                  className="text-lg h-14 px-6 text-center shadow-lg border-2 focus:border-primary/50 bg-background/80 backdrop-blur-sm"
                 />
-                <p className="text-sm text-muted-foreground">
+                <p className="text-lg text-muted-foreground text-center bg-muted/30 p-4 rounded-lg">
                   참가자들이 쉽게 식별할 수 있는 이름을 입력하세요.
                 </p>
               </div>
@@ -190,24 +191,24 @@ export default function HomePage() {
 
           {/* Step 2: Auction Method */}
           {currentStep === 2 && (
-            <div className="space-y-4">
-              <Label>경매 방법 선택</Label>
+            <div className="space-y-6">
+              <Label className="text-xl font-semibold">경매 방법 선택</Label>
               <RadioGroup 
                 value={auctionData.method} 
                 onValueChange={(value) => setAuctionData(prev => ({ ...prev, method: value }))}
-                className="space-y-4"
+                className="space-y-6"
               >
-                <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                  <RadioGroupItem value="fixed" id="fixed" className="mt-1" />
+                <div className="flex items-start space-x-4 p-6 border-2 rounded-xl hover:bg-muted/50 transition-colors shadow-lg bg-background/80 backdrop-blur-sm">
+                  <RadioGroupItem value="fixed" id="fixed" className="mt-2 scale-125" />
                   <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Shield className="h-5 w-5 text-primary" />
-                      <Label htmlFor="fixed" className="text-base font-semibold">고정입찰</Label>
+                    <div className="flex items-center space-x-3 mb-3">
+                      <Shield className="h-6 w-6 text-primary" />
+                      <Label htmlFor="fixed" className="text-xl font-semibold">고정입찰</Label>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-2">
+                    <p className="text-lg text-muted-foreground mb-3">
                       사전에 정해진 가격으로 입찰하는 방식입니다.
                     </p>
-                    <ul className="text-xs text-muted-foreground space-y-1">
+                    <ul className="text-base text-muted-foreground space-y-2">
                       <li>• 명확한 가격 설정</li>
                       <li>• 계획적 입찰 전략</li>
                       <li>• 안정적인 경매 진행</li>
@@ -215,17 +216,17 @@ export default function HomePage() {
                   </div>
                 </div>
                 
-                <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                  <RadioGroupItem value="dynamic" id="dynamic" className="mt-1" />
+                <div className="flex items-start space-x-4 p-6 border-2 rounded-xl hover:bg-muted/50 transition-colors shadow-lg bg-background/80 backdrop-blur-sm">
+                  <RadioGroupItem value="dynamic" id="dynamic" className="mt-2 scale-125" />
                   <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Zap className="h-5 w-5 text-primary" />
-                      <Label htmlFor="dynamic" className="text-base font-semibold">변동입찰</Label>
+                    <div className="flex items-center space-x-3 mb-3">
+                      <Zap className="h-6 w-6 text-primary" />
+                      <Label htmlFor="dynamic" className="text-xl font-semibold">변동입찰</Label>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-2">
+                    <p className="text-lg text-muted-foreground mb-3">
                       경매가 진행되면서 가격이 실시간으로 변동하는 방식입니다.
                     </p>
-                    <ul className="text-xs text-muted-foreground space-y-1">
+                    <ul className="text-base text-muted-foreground space-y-2">
                       <li>• 실시간 가격 변동</li>
                       <li>• 동적 입찰 시스템</li>
                       <li>• 경쟁적 경매 환경</li>
@@ -238,11 +239,11 @@ export default function HomePage() {
 
           {/* Step 3: Initial Capital */}
           {currentStep === 3 && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="initial-capital">초기 자본금</Label>
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <Label htmlFor="initial-capital" className="text-xl font-semibold">초기 자본금</Label>
                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <DollarSign className="absolute left-6 top-1/2 transform -translate-y-1/2 h-6 w-6 text-muted-foreground" />
                   <Input
                     id="initial-capital"
                     type="number"
@@ -250,33 +251,33 @@ export default function HomePage() {
                     value={auctionData.initialCapital}
                     onChange={(e) => setAuctionData(prev => ({ ...prev, initialCapital: e.target.value }))}
                     min="1"
-                    className="pl-10"
+                    className="text-lg h-14 pl-16 pr-6 text-center shadow-lg border-2 focus:border-primary/50 bg-background/80 backdrop-blur-sm"
                   />
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-lg text-muted-foreground text-center bg-muted/30 p-4 rounded-lg">
                   참가자들이 경매에 사용할 초기 자본금을 설정하세요.
                 </p>
               </div>
 
               {/* Preview */}
-              <Card className="bg-muted/50">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">경매 설정 미리보기</CardTitle>
+              <Card className="bg-muted/30 shadow-lg border-2">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg">경매 설정 미리보기</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">경매 이름:</span>
-                    <span>{auctionData.name || "미설정"}</span>
+                <CardContent className="space-y-4 text-base">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground font-medium">경매 이름:</span>
+                    <span className="font-semibold">{auctionData.name || "미설정"}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">경매 방법:</span>
-                    <Badge variant="outline">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground font-medium">경매 방법:</span>
+                    <Badge variant="outline" className="text-sm px-3 py-1">
                       {auctionData.method === "fixed" ? "고정입찰" : "변동입찰"}
                     </Badge>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">초기 자본금:</span>
-                    <span>{Number(auctionData.initialCapital).toLocaleString()}원</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground font-medium">초기 자본금:</span>
+                    <span className="font-semibold text-primary">{Number(auctionData.initialCapital).toLocaleString()}원</span>
                   </div>
                 </CardContent>
               </Card>
@@ -284,28 +285,29 @@ export default function HomePage() {
           )}
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between pt-6">
+          <div className="flex justify-between pt-8">
             <Button 
               variant="outline" 
               onClick={handlePrev}
               disabled={currentStep === 1}
+              className="text-lg h-12 px-8 shadow-lg"
             >
               이전
             </Button>
             
             {currentStep < 3 ? (
-              <Button onClick={handleNext}>
+              <Button onClick={handleNext} className="text-lg h-12 px-8 shadow-lg">
                 다음
-                <ArrowRight className="h-4 w-4 ml-2" />
+                <ArrowRight className="h-5 w-5 ml-3" />
               </Button>
             ) : (
               <Button 
                 onClick={handleCreateAuction}
                 disabled={isCreating}
-                className="bg-primary hover:bg-primary/90"
+                className="bg-primary hover:bg-primary/90 text-lg h-12 px-8 shadow-lg"
               >
                 {isCreating ? "생성 중..." : "경매 생성하기"}
-                <Gavel className="h-4 w-4 ml-2" />
+                <Gavel className="h-5 w-5 ml-3" />
               </Button>
             )}
           </div>
