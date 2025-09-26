@@ -120,7 +120,7 @@ export default function HomePage() {
               {/* Traditional Typography */}
               <div className="space-y-8">
                 <div className="inline-block relative">
-                  <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold text-emerald-900 tracking-tight animate-scale-in-up">
+                  <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold text-emerald-900 tracking-tight animate-scale-in-up font-handwriting">
                     가담
                   </h1>
                   <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-2/3 h-1 bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 rounded-full animate-scale-in-delayed"></div>
@@ -132,7 +132,7 @@ export default function HomePage() {
                   <div className="absolute -bottom-4 -right-4 w-3 h-3 bg-emerald-500 rounded-full animate-pulse-slow delay-1500"></div>
                 </div>
                 
-                <h2 className="text-2xl md:text-3xl font-medium text-emerald-800 tracking-wide animate-slide-in-left delay-300">
+                <h2 className="text-2xl md:text-3xl font-semibold text-emerald-800 tracking-wide animate-slide-in-left delay-300 font-handwriting">
                   가치를 이야기하다
                 </h2>
               </div>
@@ -144,7 +144,7 @@ export default function HomePage() {
                     const formElement = document.getElementById('auction-form');
                     formElement?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="group relative px-12 py-5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg font-semibold text-lg transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 flex items-center justify-center overflow-hidden border-2 border-emerald-700"
+                  className="group relative px-12 py-5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl font-bold text-lg transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 flex items-center justify-center overflow-hidden border-2 border-emerald-700 font-handwriting"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-emerald-700 to-emerald-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
                   <Gavel className="w-5 h-5 mr-3 relative z-10" />
@@ -153,7 +153,7 @@ export default function HomePage() {
                 
                 <button 
                   onClick={() => router.push('/help')}
-                  className="group relative px-12 py-5 border-2 border-emerald-600 hover:border-emerald-700 text-emerald-800 hover:text-emerald-900 rounded-lg font-semibold text-lg transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 flex items-center justify-center overflow-hidden bg-emerald-50/80 backdrop-blur-sm"
+                  className="group relative px-12 py-5 border-2 border-emerald-600 hover:border-emerald-700 text-emerald-800 hover:text-emerald-900 rounded-xl font-bold text-lg transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 flex items-center justify-center overflow-hidden bg-emerald-50/80 backdrop-blur-sm font-handwriting"
                 >
                   <div className="absolute inset-0 bg-emerald-100 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
                   <Target className="w-5 h-5 mr-3 relative z-10" />
@@ -163,13 +163,13 @@ export default function HomePage() {
               
               {/* Traditional Feature Pills */}
               <div className="flex flex-wrap justify-center gap-4 mt-12 animate-fade-in-up delay-1000">
-                <div className="px-6 py-3 bg-emerald-100/80 text-emerald-800 rounded-full text-sm font-medium border border-emerald-300">
+                <div className="px-6 py-3 bg-emerald-100/80 text-emerald-800 rounded-full text-sm font-semibold border border-emerald-300 shadow-sm font-handwriting">
                   경매 시뮬레이션
                 </div>
-                <div className="px-6 py-3 bg-amber-100/80 text-amber-800 rounded-full text-sm font-medium border border-amber-300">
+                <div className="px-6 py-3 bg-amber-100/80 text-amber-800 rounded-full text-sm font-semibold border border-amber-300 shadow-sm font-handwriting">
                   놀이와 감상
                 </div>
-                <div className="px-6 py-3 bg-emerald-100/80 text-emerald-800 rounded-full text-sm font-medium border border-emerald-300">
+                <div className="px-6 py-3 bg-emerald-100/80 text-emerald-800 rounded-full text-sm font-semibold border border-emerald-300 shadow-sm font-handwriting">
                   가치와 토론
                 </div>
               </div>

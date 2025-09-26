@@ -105,30 +105,40 @@ export function Sidebar({ roomId }: SidebarProps = {}) {
       {/* 얇은 아이콘 사이드바 */}
       <aside className="fixed left-0 top-16 w-16 border-r border-stone-200 bg-stone-100/95 backdrop-blur-sm shadow-lg h-[calc(100vh-4rem)] z-40 flex flex-col items-center py-4 space-y-4">
         {/* 타이머 아이콘 */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => handleSectionToggle('timer')}
-          className={`w-12 h-12 rounded-xl transition-all duration-200 ${
-            expandedSection === 'timer' ? 'bg-primary/20 text-primary' : 'hover:bg-primary/10'
-          }`}
-          title="타이머"
-        >
-          <Timer className="h-5 w-5" />
-        </Button>
+        <div className="flex flex-col items-center space-y-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleSectionToggle('timer')}
+            className={`w-12 h-12 rounded-xl transition-all duration-200 ${
+              expandedSection === 'timer' ? 'bg-primary/20 text-primary' : 'hover:bg-primary/10'
+            }`}
+            title="타이머"
+          >
+            <Timer className="h-5 w-5" />
+          </Button>
+          <span className="text-xs font-medium text-muted-foreground text-center">
+            타이머
+          </span>
+        </div>
 
         {/* 물품 관리 아이콘 */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => handleSectionToggle('items')}
-          className={`w-12 h-12 rounded-xl transition-all duration-200 ${
-            expandedSection === 'items' ? 'bg-primary/20 text-primary' : 'hover:bg-primary/10'
-          }`}
-          title="경매 물품"
-        >
-          <Package className="h-5 w-5" />
-        </Button>
+        <div className="flex flex-col items-center space-y-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleSectionToggle('items')}
+            className={`w-12 h-12 rounded-xl transition-all duration-200 ${
+              expandedSection === 'items' ? 'bg-primary/20 text-primary' : 'hover:bg-primary/10'
+            }`}
+            title="경매 물품"
+          >
+            <Package className="h-5 w-5" />
+          </Button>
+          <span className="text-xs font-medium text-muted-foreground text-center">
+            경매물품
+          </span>
+        </div>
       </aside>
 
       {/* 확장된 콘텐츠 패널 */}

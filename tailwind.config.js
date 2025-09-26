@@ -8,8 +8,10 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        'sans': ['Noto Sans KR', 'system-ui', 'sans-serif'],
-        'serif': ['Noto Sans KR', 'serif'],
+        'sans': ['Hi Melody', 'Gaegu', 'Noto Sans KR', 'system-ui', 'sans-serif'],
+        'serif': ['Hi Melody', 'Gaegu', 'serif'],
+        'handwriting': ['Hi Melody', 'Gaegu', 'cursive'],
+        'cute': ['Hi Melody', 'Gaegu', 'cursive'],
       },
     },
   },
