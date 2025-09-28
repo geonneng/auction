@@ -129,19 +129,24 @@ export function GuestSidebar({ roomId, guestName }: GuestSidebarProps) {
       {/* 얇은 아이콘 사이드바 */}
       <aside className="fixed left-0 top-16 w-16 border-r border-stone-200 bg-stone-100/95 backdrop-blur-sm shadow-lg h-[calc(100vh-4rem)] z-40 flex flex-col items-center py-4 space-y-4">
         {/* 물품 등록 아이콘 */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={openItemDialog}
-          className="w-12 h-12 rounded-xl transition-all duration-200 hover:bg-primary/10"
-          title="경매 물품 등록"
-        >
-          {auctionItem ? (
-            <CheckCircle className="h-5 w-5 text-green-600" />
-          ) : (
-            <Plus className="h-5 w-5" />
-          )}
-        </Button>
+        <div className="flex flex-col items-center space-y-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={openItemDialog}
+            className="w-12 h-12 rounded-xl transition-all duration-200 hover:bg-primary/10"
+            title="경매 물품 등록"
+          >
+            {auctionItem ? (
+              <CheckCircle className="h-5 w-5 text-green-600" />
+            ) : (
+              <Plus className="h-5 w-5" />
+            )}
+          </Button>
+          <span className="text-xs font-medium text-muted-foreground text-center">
+            경매물품
+          </span>
+        </div>
       </aside>
 
       {/* 물품 등록/수정 다이얼로그 */}

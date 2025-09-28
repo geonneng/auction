@@ -295,7 +295,7 @@ export default function DynamicHostDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-emerald-600">
-              {auctionState.name ? `${auctionState.name} - 변동입찰 호스트` : '가치오름 - 변동입찰 호스트'}
+              {auctionState.name ? `${auctionState.name} - 변동입찰 호스트` : '가담 - 변동입찰 호스트'}
             </h1>
             <p className="text-muted-foreground">방 ID: {auctionState.id} | 경매 방식: 변동입찰</p>
             {auctionState.status === "ACTIVE" && (
