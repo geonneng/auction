@@ -95,6 +95,8 @@ function DynamicHostDashboardContent() {
         console.log("[Dynamic Host] Polling room state for roomId:", roomId)
         const response = await auctionAPI.getState(roomId)
         console.log("[Dynamic Host] Poll response:", response)
+        console.log("[DynamicHost] Guests in response:", response.state?.guests)
+        console.log("[DynamicHost] Guest count in response:", response.state?.guestCount)
         
         if (response.success) {
           const newState = response.state
@@ -151,6 +153,11 @@ function DynamicHostDashboardContent() {
             // 상태가 동일해도 참가자 수가 변화했을 수 있으므로 확인
             if (previousGuestCount !== currentGuestCount) {
               console.log(`[DynamicHost] Guest count changed: ${previousGuestCount} -> ${currentGuestCount}`)
+              console.log(`[DynamicHost] Force updating state due to guest count change`)
+              
+              // 참가자 수가 변경된 경우 강제로 상태 업데이트
+              setAuctionState(newState)
+              setRecentBids(newState.bids || [])
               setPreviousGuestCount(currentGuestCount)
               
               if (currentGuestCount > previousGuestCount) {
@@ -161,6 +168,21 @@ function DynamicHostDashboardContent() {
                     description: `${guest.nickname}님이 변동입찰 경매에 참여했습니다.`,
                   })
                 })
+              }
+            } else {
+              // 참가자 배열이 실제로 변경되었는지도 확인
+              const currentGuestNames = newState.guests.map((g: any) => g.nickname).sort()
+              const previousGuestNames = (auctionState?.guests || []).map((g: any) => g.nickname).sort()
+              const guestsChanged = JSON.stringify(currentGuestNames) !== JSON.stringify(previousGuestNames)
+              
+              if (guestsChanged) {
+                console.log(`[DynamicHost] Guest list changed, force updating state`)
+                console.log(`[DynamicHost] Previous guests:`, previousGuestNames)
+                console.log(`[DynamicHost] Current guests:`, currentGuestNames)
+                
+                // 참가자 목록이 변경된 경우 강제로 상태 업데이트
+                setAuctionState(newState)
+                setRecentBids(newState.bids || [])
               }
             }
           }

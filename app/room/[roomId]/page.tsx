@@ -327,15 +327,19 @@ export default function GuestRoom() {
           }
         }, 1000) // 1초 후 호스트 알림
         
-        // 추가 알림 요청 (더 확실한 동기화)
-        setTimeout(async () => {
+        // 추가 알림 요청 (더 확실한 동기화) - 여러 번 호출
+        const notifyHost = async (attempt: number) => {
           try {
             await auctionAPI.getState(roomId)
-            console.log("[Guest] Second notification sent to host")
+            console.log(`[Guest] Notification ${attempt} sent to host`)
           } catch (error) {
-            console.error("[Guest] Failed to send second notification:", error)
+            console.error(`[Guest] Failed to send notification ${attempt}:`, error)
           }
-        }, 2000) // 2초 후 추가 알림
+        }
+        
+        setTimeout(() => notifyHost(2), 1500) // 1.5초 후
+        setTimeout(() => notifyHost(3), 3000) // 3초 후  
+        setTimeout(() => notifyHost(4), 5000) // 5초 후
         
         toast({
           title: "참여 완료",
