@@ -173,7 +173,9 @@ function HostDashboardContent() {
       
       // Continue polling if still active
       if (isPolling) {
-        createTimeout(loadRoomState, 2000) // Poll every 2 seconds for stable updates
+        // 게스트 참여 감지를 위해 첫 30초는 1초 간격으로 폴링
+        const pollingInterval = retryCount < 15 ? 1000 : 2000
+        createTimeout(loadRoomState, pollingInterval)
       }
     }
 
@@ -361,6 +363,16 @@ function HostDashboardContent() {
           description: `"${item.name}"이(가) 라운드 ${targetRound}에 등록되었습니다.`,
         })
         setIsItemDialogOpen(false)
+        
+        // 경매 상태 새로고침
+        try {
+          const stateResponse = await auctionAPI.getState(roomId)
+          if (stateResponse.success) {
+            setAuctionState(stateResponse.state)
+          }
+        } catch (error) {
+          console.error("[Host] Failed to refresh state after item registration:", error)
+        }
       } else {
         toast({
           title: "오류",

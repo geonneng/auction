@@ -630,6 +630,20 @@ export async function POST(request: NextRequest) {
           items
         })
 
+      case 'getCurrentRoundItem':
+        const { roomId: currentItemRoomId } = data
+        const currentItemRoom = auctionRooms.get(currentItemRoomId)
+        
+        if (!currentItemRoom) {
+          return NextResponse.json({ success: false, error: "존재하지 않는 방입니다" })
+        }
+
+        return NextResponse.json({
+          success: true,
+          currentRoundItem: currentItemRoom.currentRoundItem,
+          currentRound: currentItemRoom.currentRound
+        })
+
       case 'saveAuctionItem':
         const { roomId: saveRoomId, itemData: saveItemData, guestName } = data
         const saveRoom = auctionRooms.get(saveRoomId)

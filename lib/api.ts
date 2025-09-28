@@ -195,6 +195,16 @@ export class AuctionAPI {
     })
   }
 
+  async getCurrentRoundItem(roomId: string) {
+    return this.makeRequest(this.baseUrl, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'getCurrentRoundItem',
+        roomId
+      })
+    })
+  }
+
   async registerAuctionItem(roomId: string, itemData: any, round: number) {
     return this.makeRequest(this.baseUrl, {
       method: 'POST',

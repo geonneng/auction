@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Wallet, Clock, TrendingUp, AlertCircle } from "lucide-react"
+import { Wallet, Clock, TrendingUp, AlertCircle, Package } from "lucide-react"
 import { auctionAPI } from "@/lib/api"
 import type { GuestData, RoundResults } from "@/types/auction"
 import { toast } from "@/hooks/use-toast"
@@ -36,6 +36,7 @@ export default function GuestRoom() {
   const [roundResults, setRoundResults] = useState<RoundResults | null>(null)
   const [canBid, setCanBid] = useState(true)
   const [previousStateHash, setPreviousStateHash] = useState("")
+  const [currentRoundItem, setCurrentRoundItem] = useState<any>(null)
   
   // 연결 상태 모니터링
   const { connectionState, recordRequest } = useConnectionMonitor({
@@ -71,6 +72,19 @@ export default function GuestRoom() {
       console.log("[Guest] Component unmounting, cleaning up resources")
     }
   })
+
+  // 현재 라운드의 경매 물품 정보 가져오기
+  const loadCurrentRoundItem = async () => {
+    try {
+      const response = await auctionAPI.getCurrentRoundItem(roomId)
+      if (response.success) {
+        setCurrentRoundItem(response.currentRoundItem)
+        console.log("[Guest] Current round item loaded:", response.currentRoundItem)
+      }
+    } catch (error) {
+      console.error("[Guest] Failed to load current round item:", error)
+    }
+  }
 
   // Check if room exists on mount and poll for updates
   useEffect(() => {
@@ -111,22 +125,25 @@ export default function GuestRoom() {
                 hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
               })
               
-              // 상태가 실제로 변화했을 때만 업데이트
-              if (stateHash !== previousStateHash) {
-                const newGuestData = {
-                  ...guestData,
-                  capital: currentGuest.capital,
-                  status: response.state.status,
-                  currentRound: response.state.currentRound,
-                  roundStatus: response.state.roundStatus,
-                  hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
-                }
-                
-                console.log("[Guest] Updating guest data:", newGuestData)
-                setGuestData(newGuestData)
-                setCanBid(!currentGuest.hasBidInCurrentRound)
-                setPreviousStateHash(stateHash)
+            // 상태가 실제로 변화했을 때만 업데이트
+            if (stateHash !== previousStateHash) {
+              const newGuestData = {
+                ...guestData,
+                capital: currentGuest.capital,
+                status: response.state.status,
+                currentRound: response.state.currentRound,
+                roundStatus: response.state.roundStatus,
+                hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
               }
+              
+              console.log("[Guest] Updating guest data:", newGuestData)
+              setGuestData(newGuestData)
+              setCanBid(!currentGuest.hasBidInCurrentRound)
+              setPreviousStateHash(stateHash)
+              
+              // 현재 라운드의 경매 물품 정보 가져오기
+              loadCurrentRoundItem()
+            }
               
               // Check for state changes and show notifications
               if (previousState) {
@@ -269,35 +286,35 @@ export default function GuestRoom() {
         setIsJoining(false)
         
         // 즉시 상태 확인을 위해 추가 폴링 실행
-        setTimeout(() => {
-          const checkRoomAndPoll = async () => {
-            try {
-              const stateResponse = await auctionAPI.getState(roomId)
-              if (stateResponse.success) {
-                const currentGuest = stateResponse.state.guests.find(g => g.nickname === response.nickname)
-                if (currentGuest) {
-                  setGuestData(prev => prev ? {
-                    ...prev,
-                    capital: currentGuest.capital,
-                    status: stateResponse.state.status,
-                    currentRound: stateResponse.state.currentRound,
-                    roundStatus: stateResponse.state.roundStatus,
-                    hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
-                  } : null)
-                  setCanBid(!currentGuest.hasBidInCurrentRound)
-                }
+        setTimeout(async () => {
+          try {
+            const stateResponse = await auctionAPI.getState(roomId)
+            if (stateResponse.success) {
+              const currentGuest = stateResponse.state.guests.find(g => g.nickname === response.nickname)
+              if (currentGuest) {
+                setGuestData(prev => prev ? {
+                  ...prev,
+                  capital: currentGuest.capital,
+                  status: stateResponse.state.status,
+                  currentRound: stateResponse.state.currentRound,
+                  roundStatus: stateResponse.state.roundStatus,
+                  hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
+                } : null)
+                setCanBid(!currentGuest.hasBidInCurrentRound)
               }
-            } catch (error) {
-              console.error("[Guest] Failed to update state after join:", error)
             }
+          } catch (error) {
+            console.error("[Guest] Failed to update state after join:", error)
           }
-          checkRoomAndPoll()
         }, 500) // 0.5초 후 즉시 상태 확인
         
         toast({
           title: "참여 완료",
           description: `${response.nickname}님으로 경매에 참여했습니다.`,
         })
+        
+        // 현재 라운드 물품 정보 로드
+        loadCurrentRoundItem()
       } else {
         setError(response.error || "참여에 실패했습니다.")
         setIsJoining(false)
@@ -522,6 +539,53 @@ export default function GuestRoom() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Current Round Item */}
+          {currentRoundItem && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  현재 라운드 경매 물품
+                </CardTitle>
+                <CardDescription>
+                  라운드 {guestData.currentRound}의 경매 물품입니다.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h3 className="font-semibold text-lg">{currentRoundItem.item.name}</h3>
+                      <p className="text-muted-foreground mt-2">{currentRoundItem.item.description}</p>
+                      {currentRoundItem.item.startingPrice && (
+                        <div className="mt-2">
+                          <span className="text-sm text-muted-foreground">시작가: </span>
+                          <span className="font-semibold text-primary">
+                            {currentRoundItem.item.startingPrice.toLocaleString()}원
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {currentRoundItem.item.image && (
+                      <div className="flex justify-center">
+                        <img 
+                          src={currentRoundItem.item.image} 
+                          alt={currentRoundItem.item.name}
+                          className="max-w-full h-48 object-contain rounded-lg border"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  {currentRoundItem.item.ownerNickname && (
+                    <div className="text-sm text-muted-foreground">
+                      등록자: {currentRoundItem.item.ownerNickname}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Bidding Section */}
           {guestData.status === "ACTIVE" && guestData.roundStatus === "ACTIVE" ? (
