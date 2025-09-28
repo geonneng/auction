@@ -19,6 +19,7 @@ class AuctionRoom {
     this.currentRound = 0
     this.roundStatus = "WAITING" // WAITING, ACTIVE, ENDED
     this.currentRoundItem = null // 현재 라운드의 경매 물품
+    this.auctionItems = new Map() // nickname -> AuctionItem (게스트들이 등록한 물품들)
     this.createdAt = new Date()
   }
 
@@ -274,6 +275,33 @@ class AuctionRoom {
     }
   }
 
+  // 경매 물품 저장 (게스트가 등록한 물품)
+  saveAuctionItem(itemData: any, guestName: string) {
+    const item = {
+      ...itemData,
+      id: itemData.id || Date.now().toString(),
+      createdBy: guestName,
+      createdAt: new Date().toISOString(),
+      roomId: this.id
+    }
+    
+    this.auctionItems.set(guestName, item)
+    
+    return {
+      success: true,
+      item
+    }
+  }
+
+  // 모든 경매 물품 조회
+  getAllAuctionItems() {
+    const items: { [guestName: string]: any } = {}
+    for (const [guestName, item] of this.auctionItems) {
+      items[guestName] = item
+    }
+    return items
+  }
+
   getState() {
     const currentRoundBids = this.bids.filter(bid => bid.round === this.currentRound)
     const highestBid = currentRoundBids.length > 0 ?
@@ -523,11 +551,36 @@ export async function POST(request: NextRequest) {
         }
 
       case 'getAuctionItems':
-        // 실제로는 localStorage에서 가져와야 하지만, 여기서는 빈 배열 반환
+        const { roomId: itemsRoomId } = data
+        const itemsRoom = auctionRooms.get(itemsRoomId)
+        
+        if (!itemsRoom) {
+          return NextResponse.json({ success: false, error: "존재하지 않는 방입니다" })
+        }
+
+        const items = itemsRoom.getAllAuctionItems()
         return NextResponse.json({
           success: true,
-          items: []
+          items
         })
+
+      case 'saveAuctionItem':
+        const { roomId: saveRoomId, itemData: saveItemData, guestName } = data
+        const saveRoom = auctionRooms.get(saveRoomId)
+        
+        if (!saveRoom) {
+          return NextResponse.json({ success: false, error: "존재하지 않는 방입니다" })
+        }
+
+        try {
+          const result = saveRoom.saveAuctionItem(saveItemData, guestName)
+          return NextResponse.json({
+            success: true,
+            result
+          })
+        } catch (error: any) {
+          return NextResponse.json({ success: false, error: error.message })
+        }
 
       case 'distributeWinningAmount':
         const { roomId: distRoomId, winnerNickname, amount: winningAmount, ownerNickname } = data

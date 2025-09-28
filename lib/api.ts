@@ -120,8 +120,24 @@ export class AuctionAPI {
   }
 
   async getAuctionItems(roomId: string) {
-    return this.makeRequest(`${this.baseUrl}?roomId=${roomId}&action=getAuctionItems`, {
-      method: 'GET'
+    return this.makeRequest(this.baseUrl, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'getAuctionItems',
+        roomId
+      })
+    })
+  }
+
+  async saveAuctionItem(roomId: string, itemData: any, guestName: string) {
+    return this.makeRequest(this.baseUrl, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'saveAuctionItem',
+        roomId,
+        itemData,
+        guestName
+      })
     })
   }
 

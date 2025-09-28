@@ -37,7 +37,7 @@ function HostDashboardContent() {
   const [isDistributingAmount, setIsDistributingAmount] = useState(false)
   
   // AuctionItemProvider에서 경매 물품 데이터 가져오기
-  const { auctionItems, getAllGuests, isLoading: isLoadingItems } = useAuctionItem()
+  const { auctionItems, getAllGuests, isLoading: isLoadingItems, loadAuctionItems } = useAuctionItem()
 
   useEffect(() => {
     let isPolling = true
@@ -61,6 +61,9 @@ function HostDashboardContent() {
           setIsConnected(true)
           consecutiveErrors = 0
           retryCount = 0
+          
+          // 경매 물품 목록도 주기적으로 새로고침
+          loadAuctionItems()
         } else {
           console.error("[Host] Failed to get state:", response.error)
           consecutiveErrors++
