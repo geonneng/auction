@@ -196,8 +196,8 @@ function DynamicHostDashboardContent() {
       
       // Continue polling if still active
       if (isPolling) {
-        // 게스트 참여 감지를 위해 첫 1분은 1초 간격으로 폴링
-        const pollingInterval = retryCount < 30 ? 1000 : 2000
+        // 더 빠른 동기화를 위해 폴링 간격 단축
+        const pollingInterval = retryCount < 60 ? 500 : 1000 // 첫 30초는 0.5초, 이후 1초
         createTimeout(loadRoomState, pollingInterval)
       }
     }
@@ -216,6 +216,20 @@ function DynamicHostDashboardContent() {
       const response = await auctionAPI.startAuction(auctionState.id)
       if (response.success) {
         setAuctionState(response.state)
+        
+        // 경매 시작 후 즉시 상태 새로고침으로 게스트 페이지에 전달
+        setTimeout(async () => {
+          try {
+            const stateResponse = await auctionAPI.getState(roomId)
+            if (stateResponse.success) {
+              setAuctionState(stateResponse.state)
+              console.log("[DynamicHost] Auction started, state refreshed for guests")
+            }
+          } catch (error) {
+            console.error("[DynamicHost] Failed to refresh state after auction start:", error)
+          }
+        }, 100)
+        
         toast({
           title: "변동입찰 경매 시작",
           description: "변동입찰 경매가 성공적으로 시작되었습니다!",
@@ -247,6 +261,20 @@ function DynamicHostDashboardContent() {
         setRecentBids([]) // 새 라운드 시작 시 입찰 현황 초기화
         setRoundResults(null) // 이전 라운드 결과 초기화
         setCurrentHighestBid(null) // 최고 입찰 초기화
+        
+        // 라운드 시작 후 즉시 상태 새로고침으로 게스트 페이지에 전달
+        setTimeout(async () => {
+          try {
+            const stateResponse = await auctionAPI.getState(roomId)
+            if (stateResponse.success) {
+              setAuctionState(stateResponse.state)
+              console.log("[DynamicHost] Round started, state refreshed for guests")
+            }
+          } catch (error) {
+            console.error("[DynamicHost] Failed to refresh state after round start:", error)
+          }
+        }, 100)
+        
         toast({
           title: "라운드 시작",
           description: `라운드 ${response.state.currentRound}이 시작되었습니다!`,

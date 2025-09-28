@@ -143,6 +143,14 @@ export default function GuestRoom() {
               
               // 현재 라운드의 경매 물품 정보 가져오기
               loadCurrentRoundItem()
+              
+              console.log("[Guest] State updated:", {
+                status: response.state.status,
+                roundStatus: response.state.roundStatus,
+                currentRound: response.state.currentRound,
+                canBid: !currentGuest.hasBidInCurrentRound,
+                hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
+              })
             }
               
               // Check for state changes and show notifications
@@ -252,8 +260,8 @@ export default function GuestRoom() {
     // Initial check
     checkRoomAndPoll()
     
-    // Poll every 2 seconds for stable updates
-    const interval = createInterval(checkRoomAndPoll, 2000)
+    // Poll every 1 second for faster updates
+    const interval = createInterval(checkRoomAndPoll, 1000)
 
     return () => {
       isPolling = false

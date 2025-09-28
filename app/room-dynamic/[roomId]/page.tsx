@@ -144,6 +144,14 @@ export default function DynamicGuestRoom() {
               // 현재 라운드의 경매 물품 정보 가져오기
               loadCurrentRoundItem()
               
+              console.log("[DynamicGuest] State updated:", {
+                status: response.state.status,
+                roundStatus: response.state.roundStatus,
+                currentRound: response.state.currentRound,
+                canBid: dynamicCanBid,
+                capital: currentGuest.capital
+              })
+              
               // Check for state changes and show notifications
               if (previousState) {
                 console.log("[Dynamic Guest] Previous state:", previousState)
@@ -266,8 +274,8 @@ export default function DynamicGuestRoom() {
     // Initial check
     checkRoomAndPoll()
     
-    // Poll every 2 seconds for stable updates
-    const interval = createInterval(checkRoomAndPoll, 2000)
+    // Poll every 1 second for faster updates
+    const interval = createInterval(checkRoomAndPoll, 1000)
 
     return () => {
       isPolling = false
