@@ -120,7 +120,8 @@ function HostDashboardContent() {
             guestCount: currentGuestCount,
             status: newState.status,
             currentRound: newState.currentRound,
-            roundStatus: newState.roundStatus
+            roundStatus: newState.roundStatus,
+            guests: newState.guests.map(g => g.nickname).sort() // 참가자 목록도 해시에 포함
           })
           
           // 상태가 실제로 변화했을 때만 업데이트

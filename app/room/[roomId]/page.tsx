@@ -313,10 +313,21 @@ export default function GuestRoom() {
           try {
             // 호스트 페이지가 참가자 참여를 감지할 수 있도록 추가 요청
             await auctionAPI.getState(roomId)
+            console.log("[Guest] Notified host of participation")
           } catch (error) {
             console.error("[Guest] Failed to notify host of participation:", error)
           }
         }, 1000) // 1초 후 호스트 알림
+        
+        // 추가 알림 요청 (더 확실한 동기화)
+        setTimeout(async () => {
+          try {
+            await auctionAPI.getState(roomId)
+            console.log("[Guest] Second notification sent to host")
+          } catch (error) {
+            console.error("[Guest] Failed to send second notification:", error)
+          }
+        }, 2000) // 2초 후 추가 알림
         
         toast({
           title: "참여 완료",

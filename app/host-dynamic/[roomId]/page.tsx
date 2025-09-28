@@ -40,6 +40,8 @@ function DynamicHostDashboardContent() {
   const [isBulkUpdating, setIsBulkUpdating] = useState(false)
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false)
   const [isDistributingAmount, setIsDistributingAmount] = useState(false)
+  const [previousGuestCount, setPreviousGuestCount] = useState(0)
+  const [previousStateHash, setPreviousStateHash] = useState("")
   
   // AuctionItemProvider에서 경매 물품 데이터 가져오기
   const { auctionItems, getAllGuests, isLoading: isLoadingItems, loadAuctionItems } = useAuctionItem()
@@ -95,23 +97,91 @@ function DynamicHostDashboardContent() {
         console.log("[Dynamic Host] Poll response:", response)
         
         if (response.success) {
-          setAuctionState(response.state)
-          setRecentBids(response.state.bids || [])
-          setJoinUrl(`${window.location.origin}/room-dynamic/${roomId}`)
-          setIsConnected(true)
-          consecutiveErrors = 0
-          retryCount = 0
+          const newState = response.state
+          
+          // 데이터 무결성 검증
+          const validation = DataValidator.validateAuctionState(newState)
+          if (!validation.isValid) {
+            console.error("[DynamicHost] Invalid auction state:", validation.errors)
+            // 데이터 복구 시도
+            const recoveredState = DataValidator.recoverAuctionState(newState)
+            newState = recoveredState
+          }
+          
+          if (validation.warnings.length > 0) {
+            console.warn("[DynamicHost] Auction state warnings:", validation.warnings)
+          }
+          
+          const currentGuestCount = newState.guestCount || 0
+          
+          // 상태 변화 감지를 위한 해시 생성
+          const stateHash = JSON.stringify({
+            guestCount: currentGuestCount,
+            status: newState.status,
+            currentRound: newState.currentRound,
+            roundStatus: newState.roundStatus,
+            guests: newState.guests.map(g => g.nickname).sort() // 참가자 목록도 해시에 포함
+          })
+          
+          // 상태가 실제로 변화했을 때만 업데이트
+          if (stateHash !== previousStateHash) {
+            // 참가자 수 변화 감지 및 알림
+            if (previousGuestCount > 0 && currentGuestCount > previousGuestCount) {
+              const newGuests = newState.guests.slice(previousGuestCount)
+              newGuests.forEach((guest: any) => {
+                toast({
+                  title: "새 참가자 참여",
+                  description: `${guest.nickname}님이 변동입찰 경매에 참여했습니다.`,
+                })
+              })
+            }
+            
+            setAuctionState(newState)
+            setRecentBids(newState.bids || [])
+            setJoinUrl(`${window.location.origin}/room-dynamic/${roomId}`)
+            setIsConnected(true)
+            setPreviousGuestCount(currentGuestCount)
+            setPreviousStateHash(stateHash)
+            
+            // 경매 물품 목록도 주기적으로 새로고침 (캐시 우선)
+            setTimeout(() => {
+              loadAuctionItems(roomId, false)
+            }, 100)
+          } else {
+            // 상태가 동일해도 참가자 수가 변화했을 수 있으므로 확인
+            if (previousGuestCount !== currentGuestCount) {
+              console.log(`[DynamicHost] Guest count changed: ${previousGuestCount} -> ${currentGuestCount}`)
+              setPreviousGuestCount(currentGuestCount)
+              
+              if (currentGuestCount > previousGuestCount) {
+                const newGuests = newState.guests.slice(previousGuestCount)
+                newGuests.forEach((guest: any) => {
+                  toast({
+                    title: "새 참가자 참여",
+                    description: `${guest.nickname}님이 변동입찰 경매에 참여했습니다.`,
+                  })
+                })
+              }
+            }
+          }
           
           // Update current highest bid for dynamic auction
-          if (response.state.currentHighestBid) {
-            setCurrentHighestBid(response.state.currentHighestBid)
+          if (newState.currentHighestBid) {
+            setCurrentHighestBid(newState.currentHighestBid)
           }
+          
+          // 연결 상태 기록
+          recordRequest(true)
+          consecutiveErrors = 0
+          retryCount = 0
         } else {
           console.error("[Dynamic Host] Failed to get state:", response.error)
+          recordRequest(false)
           consecutiveErrors++
         }
       } catch (error) {
         console.error("[Dynamic Host] Error polling room state:", error)
+        recordRequest(false)
         consecutiveErrors++
       }
       
