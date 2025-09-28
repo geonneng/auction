@@ -520,7 +520,10 @@ export default function HostDashboard() {
                             <AlertDescription className="flex items-center justify-between min-w-0">
                               <div className="flex items-center gap-2 min-w-0 flex-1">
                                 <span className="font-bold text-lg truncate">{bid.nickname}</span>
-                                <Badge variant="outline" className="flex-shrink-0">입찰 완료</Badge>
+                                {index === 0 && <Badge variant="default" className="flex-shrink-0">1위</Badge>}
+                                {index === 1 && <Badge variant="secondary" className="flex-shrink-0">2위</Badge>}
+                                {index === 2 && <Badge variant="outline" className="flex-shrink-0">3위</Badge>}
+                                {index >= 3 && <Badge variant="outline" className="flex-shrink-0">{index + 1}위</Badge>}
                               </div>
                               <div className="text-right flex-shrink-0 ml-2">
                                 <div className="font-mono font-bold text-lg text-muted-foreground">
