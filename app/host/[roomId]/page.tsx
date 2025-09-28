@@ -289,6 +289,10 @@ function HostDashboardContent() {
   const handleDistributeWinningAmount = async () => {
     if (!auctionState || !roundResults?.winner || !auctionState.currentRoundItem) return
 
+    // 토스트 메시지용 데이터 미리 저장
+    const winnerAmount = roundResults.winner.amount
+    const ownerNickname = auctionState.currentRoundItem.item.ownerNickname
+
     setIsDistributingAmount(true)
     try {
       const response = await auctionAPI.distributeWinningAmount(
@@ -304,7 +308,7 @@ function HostDashboardContent() {
         setRoundResults(null) // 이전 라운드 결과 초기화
         toast({
           title: "성공",
-          description: `${roundResults.winner.amount?.toLocaleString()}원이 ${auctionState.currentRoundItem.item.ownerNickname}에게 전달되었습니다.`,
+          description: `${winnerAmount?.toLocaleString()}원이 ${ownerNickname}에게 전달되었습니다.`,
         })
       } else {
         toast({
