@@ -18,6 +18,7 @@ class AuctionRoom {
     this.bids = [] // Array of { nickname, amount, timestamp, round }
     this.currentRound = 0
     this.roundStatus = "WAITING" // WAITING, ACTIVE, ENDED
+    this.currentRoundItem = null // 현재 라운드의 경매 물품
     this.createdAt = new Date()
   }
 
@@ -207,13 +208,70 @@ class AuctionRoom {
     this.roundStatus = "ENDED"
     
     const roundBids = this.bids.filter(bid => bid.round === this.currentRound)
+    const winner = roundBids.length > 0 ? roundBids.reduce((max, bid) => bid.amount > max.amount ? bid : max) : null
+    
     const roundResults = {
       round: this.currentRound,
       bids: roundBids.sort((a, b) => b.amount - a.amount), // Sort by amount descending
-      winner: roundBids.length > 0 ? roundBids.reduce((max, bid) => bid.amount > max.amount ? bid : max) : null
+      winner
     }
     
+    // 라운드 종료 후 경매 물품은 유지 (낙찰 금액 전달 후 수동으로 초기화)
+    
     return roundResults
+  }
+
+  registerAuctionItem(itemData: any, round: number) {
+    if (this.roundStatus !== "WAITING" && this.roundStatus !== "ENDED") {
+      throw new Error("라운드가 대기 상태이거나 종료된 상태일 때만 물품을 등록할 수 있습니다")
+    }
+
+    // itemData에 ownerNickname이 없으면 추가
+    const itemWithOwner = {
+      ...itemData,
+      ownerNickname: itemData.createdBy || itemData.ownerNickname || "알 수 없음"
+    }
+
+    this.currentRoundItem = {
+      item: itemWithOwner,
+      registeredAt: new Date()
+    }
+
+    return {
+      success: true,
+      item: this.currentRoundItem
+    }
+  }
+
+  distributeWinningAmount(winnerNickname: string, amount: number, ownerNickname: string) {
+    if (!this.currentRoundItem) {
+      throw new Error("등록된 경매 물품이 없습니다")
+    }
+
+    const winner = this.guests.get(winnerNickname)
+    const owner = this.guests.get(ownerNickname)
+
+    if (!winner) {
+      throw new Error("낙찰자를 찾을 수 없습니다")
+    }
+
+    if (!owner) {
+      throw new Error("물품 등록자를 찾을 수 없습니다")
+    }
+
+    // 물품 등록자에게 낙찰금액 전달 (자본금 증가)
+    owner.capital += amount
+
+    // 낙찰 금액 분배 후 경매 물품 초기화
+    this.currentRoundItem = null
+
+    return {
+      success: true,
+      winnerNickname,
+      ownerNickname,
+      amount,
+      ownerNewCapital: owner.capital
+    }
   }
 
   getState() {
@@ -236,6 +294,7 @@ class AuctionRoom {
       currentRound: this.currentRound,
       roundStatus: this.roundStatus,
       currentHighestBid: highestBid,
+      currentRoundItem: this.currentRoundItem,
     }
   }
 }
@@ -443,6 +502,51 @@ export async function POST(request: NextRequest) {
           success: true,
           state: stateRoom.getState()
         })
+
+      case 'registerAuctionItem':
+        const { roomId: regRoomId, itemData, round } = data
+        const regRoom = auctionRooms.get(regRoomId)
+        
+        if (!regRoom) {
+          return NextResponse.json({ success: false, error: "존재하지 않는 방입니다" })
+        }
+
+        try {
+          const result = regRoom.registerAuctionItem(itemData, round)
+          return NextResponse.json({
+            success: true,
+            state: regRoom.getState(),
+            result
+          })
+        } catch (error: any) {
+          return NextResponse.json({ success: false, error: error.message })
+        }
+
+      case 'getAuctionItems':
+        // 실제로는 localStorage에서 가져와야 하지만, 여기서는 빈 배열 반환
+        return NextResponse.json({
+          success: true,
+          items: []
+        })
+
+      case 'distributeWinningAmount':
+        const { roomId: distRoomId, winnerNickname, amount: winningAmount, ownerNickname } = data
+        const distRoom = auctionRooms.get(distRoomId)
+        
+        if (!distRoom) {
+          return NextResponse.json({ success: false, error: "존재하지 않는 방입니다" })
+        }
+
+        try {
+          const result = distRoom.distributeWinningAmount(winnerNickname, winningAmount, ownerNickname)
+          return NextResponse.json({
+            success: true,
+            state: distRoom.getState(),
+            result
+          })
+        } catch (error: any) {
+          return NextResponse.json({ success: false, error: error.message })
+        }
 
       default:
         return NextResponse.json({ success: false, error: "알 수 없는 액션입니다" })
