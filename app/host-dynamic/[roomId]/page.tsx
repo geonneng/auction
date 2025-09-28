@@ -305,6 +305,9 @@ function DynamicHostDashboardContent() {
       )
       
       if (response.success) {
+        // 낙찰 금액 전달 성공 시 상태 갱신
+        setAuctionState(response.state)
+        setRoundResults(null) // 이전 라운드 결과 초기화
         toast({
           title: "성공",
           description: `${roundResults.winner.amount?.toLocaleString()}원이 ${auctionState.currentRoundItem.item.ownerNickname}에게 전달되었습니다.`,
