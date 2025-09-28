@@ -56,6 +56,7 @@ function DynamicHostDashboardContent() {
         
         if (response.success) {
           setAuctionState(response.state)
+          setRecentBids(response.state.bids || [])
           setJoinUrl(`${window.location.origin}/room-dynamic/${roomId}`)
           setIsConnected(true)
           consecutiveErrors = 0
@@ -162,25 +163,6 @@ function DynamicHostDashboardContent() {
         setRoundResults(response.roundResults)
         
         if (response.roundResults.winner) {
-          // 낙찰금액을 물품 등록자에게 전달
-          if (auctionState.currentRoundItem && response.roundResults.winner.amount) {
-            try {
-              await auctionAPI.distributeWinningAmount(
-                auctionState.id,
-                response.roundResults.winner.nickname,
-                response.roundResults.winner.amount,
-                auctionState.currentRoundItem.item.ownerNickname
-              )
-            } catch (error) {
-              console.error("Failed to distribute winning amount:", error)
-              toast({
-                title: "경고",
-                description: "낙찰금액 분배에 실패했습니다.",
-                variant: "destructive",
-              })
-            }
-          }
-          
           toast({
             title: "라운드 종료",
             description: `라운드 ${response.roundResults.round} 종료! 최고 입찰자: ${response.roundResults.winner.nickname} (${response.roundResults.winner.amount?.toLocaleString()}원)`,
@@ -759,7 +741,7 @@ function DynamicHostDashboardContent() {
                         ? "라운드를 시작하면 게스트들이 입찰할 수 있습니다."
                         : auctionState.roundStatus === "ACTIVE"
                         ? "변동입찰 진행 중: 게스트들이 실시간으로 재입찰 가능합니다."
-                        : "라운드가 종료되었습니다. 새로운 라운드를 시작하세요."}
+                        : "라운드가 종료되었습니다. 새로운 라운드를 시작하거나 경매 물품을 등록할 수 있습니다."}
                     </div>
                   </div>
                 )}

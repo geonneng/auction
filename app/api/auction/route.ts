@@ -208,22 +208,43 @@ class AuctionRoom {
     this.roundStatus = "ENDED"
     
     const roundBids = this.bids.filter(bid => bid.round === this.currentRound)
+    const winner = roundBids.length > 0 ? roundBids.reduce((max, bid) => bid.amount > max.amount ? bid : max) : null
+    
     const roundResults = {
       round: this.currentRound,
       bids: roundBids.sort((a, b) => b.amount - a.amount), // Sort by amount descending
-      winner: roundBids.length > 0 ? roundBids.reduce((max, bid) => bid.amount > max.amount ? bid : max) : null
+      winner
     }
+    
+    // 낙찰자가 있고 경매 물품이 등록되어 있으면 자동으로 낙찰 금액 분배
+    if (winner && this.currentRoundItem) {
+      try {
+        this.distributeWinningAmount(winner.nickname, winner.amount, this.currentRoundItem.item.ownerNickname)
+        console.log(`[API] Auto-distributed ${winner.amount}원 from ${winner.nickname} to ${this.currentRoundItem.item.ownerNickname}`)
+      } catch (error) {
+        console.error("[API] Failed to auto-distribute winning amount:", error)
+      }
+    }
+    
+    // 라운드 종료 후 경매 물품 초기화 (새 라운드에서 새 물품 등록 가능하도록)
+    this.currentRoundItem = null
     
     return roundResults
   }
 
   registerAuctionItem(itemData: any, round: number) {
-    if (this.roundStatus !== "WAITING") {
-      throw new Error("라운드가 대기 상태일 때만 물품을 등록할 수 있습니다")
+    if (this.roundStatus !== "WAITING" && this.roundStatus !== "ENDED") {
+      throw new Error("라운드가 대기 상태이거나 종료된 상태일 때만 물품을 등록할 수 있습니다")
+    }
+
+    // itemData에 ownerNickname이 없으면 추가
+    const itemWithOwner = {
+      ...itemData,
+      ownerNickname: itemData.createdBy || itemData.ownerNickname || "알 수 없음"
     }
 
     this.currentRoundItem = {
-      item: itemData,
+      item: itemWithOwner,
       registeredAt: new Date()
     }
 
