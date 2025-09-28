@@ -13,6 +13,10 @@ import { Wallet, Clock, TrendingUp, AlertCircle } from "lucide-react"
 import { auctionAPI } from "@/lib/api"
 import type { GuestData, RoundResults } from "@/types/auction"
 import { toast } from "@/hooks/use-toast"
+import { useConnectionMonitor } from "@/hooks/use-connection-monitor"
+import { useCleanup } from "@/hooks/use-cleanup"
+import { useOfflineHandler } from "@/hooks/use-offline-handler"
+import { DataValidator } from "@/lib/data-validation"
 import { GuestLayout } from "@/components/guest-layout"
 import { AuctionItemProvider } from "@/contexts/auction-item-context"
 
@@ -31,6 +35,42 @@ export default function GuestRoom() {
   const [error, setError] = useState("")
   const [roundResults, setRoundResults] = useState<RoundResults | null>(null)
   const [canBid, setCanBid] = useState(true)
+  const [previousStateHash, setPreviousStateHash] = useState("")
+  
+  // 연결 상태 모니터링
+  const { connectionState, recordRequest } = useConnectionMonitor({
+    onConnectionLost: () => {
+      toast({
+        title: "연결 끊김",
+        description: "서버와의 연결이 끊어졌습니다. 자동으로 재연결을 시도합니다.",
+        variant: "destructive",
+      })
+    },
+    onConnectionRestored: () => {
+      toast({
+        title: "연결 복구",
+        description: "서버와의 연결이 복구되었습니다.",
+      })
+    }
+  })
+
+  // 오프라인 처리
+  const { isOffline, queueAction } = useOfflineHandler({
+    onOffline: () => {
+      toast({
+        title: "오프라인 상태",
+        description: "인터넷 연결이 끊어졌습니다. 연결이 복구되면 자동으로 동기화됩니다.",
+        variant: "destructive",
+      })
+    }
+  })
+
+  // 정리 로직
+  const { createInterval, createTimeout, cleanup } = useCleanup({
+    onUnmount: () => {
+      console.log("[Guest] Component unmounting, cleaning up resources")
+    }
+  })
 
   // Check if room exists on mount and poll for updates
   useEffect(() => {
@@ -62,18 +102,31 @@ export default function GuestRoom() {
             console.log("[Guest] Current guest found:", currentGuest)
             
             if (currentGuest) {
-              const newGuestData = {
-                ...guestData,
+              // 상태 변화 감지를 위한 해시 생성
+              const stateHash = JSON.stringify({
                 capital: currentGuest.capital,
                 status: response.state.status,
                 currentRound: response.state.currentRound,
                 roundStatus: response.state.roundStatus,
                 hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
-              }
+              })
               
-              console.log("[Guest] Updating guest data:", newGuestData)
-              setGuestData(newGuestData)
-              setCanBid(!currentGuest.hasBidInCurrentRound)
+              // 상태가 실제로 변화했을 때만 업데이트
+              if (stateHash !== previousStateHash) {
+                const newGuestData = {
+                  ...guestData,
+                  capital: currentGuest.capital,
+                  status: response.state.status,
+                  currentRound: response.state.currentRound,
+                  roundStatus: response.state.roundStatus,
+                  hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
+                }
+                
+                console.log("[Guest] Updating guest data:", newGuestData)
+                setGuestData(newGuestData)
+                setCanBid(!currentGuest.hasBidInCurrentRound)
+                setPreviousStateHash(stateHash)
+              }
               
               // Check for state changes and show notifications
               if (previousState) {
@@ -182,12 +235,12 @@ export default function GuestRoom() {
     // Initial check
     checkRoomAndPoll()
     
-    // Poll every 1 second for faster updates
-    const interval = setInterval(checkRoomAndPoll, 1000)
+    // Poll every 2 seconds for stable updates
+    const interval = createInterval(checkRoomAndPoll, 2000)
 
     return () => {
       isPolling = false
-      clearInterval(interval)
+      // createInterval로 생성된 interval은 자동으로 정리됨
     }
   }, [roomId, guestData?.nickname])
 

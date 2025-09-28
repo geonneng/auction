@@ -7,6 +7,7 @@ import { Suspense } from "react"
 import { Toaster } from "@/components/ui/toaster"
 import { Header } from "@/components/header"
 import { AuctionItemProvider } from "@/contexts/auction-item-context"
+import ErrorBoundary from "@/components/error-boundary"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -29,18 +30,20 @@ export default function RootLayout({
           
           <Header />
           <div className="relative z-10 pt-14 sm:pt-16">
-            <AuctionItemProvider>
-              <Suspense fallback={
-                <div className="flex items-center justify-center h-64">
-                  <div className="relative">
-                    <div className="animate-spin rounded-full h-10 w-10 border-3 border-emerald-200"></div>
-                    <div className="animate-spin rounded-full h-10 w-10 border-3 border-emerald-500 border-t-transparent absolute top-0 left-0"></div>
+            <ErrorBoundary>
+              <AuctionItemProvider>
+                <Suspense fallback={
+                  <div className="flex items-center justify-center h-64">
+                    <div className="relative">
+                      <div className="animate-spin rounded-full h-10 w-10 border-3 border-emerald-200"></div>
+                      <div className="animate-spin rounded-full h-10 w-10 border-3 border-emerald-500 border-t-transparent absolute top-0 left-0"></div>
+                    </div>
                   </div>
-                </div>
-              }>
-                {children}
-              </Suspense>
-            </AuctionItemProvider>
+                }>
+                  {children}
+                </Suspense>
+              </AuctionItemProvider>
+            </ErrorBoundary>
           </div>
         </div>
         <Toaster />

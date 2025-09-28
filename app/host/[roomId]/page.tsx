@@ -17,6 +17,10 @@ import { toast } from "@/hooks/use-toast"
 import QRCodeComponent from "@/components/qr-code"
 import { Sidebar } from "@/components/sidebar"
 import { AuctionItemProvider, useAuctionItem } from "@/contexts/auction-item-context"
+import { useConnectionMonitor } from "@/hooks/use-connection-monitor"
+import { useCleanup } from "@/hooks/use-cleanup"
+import { useOfflineHandler } from "@/hooks/use-offline-handler"
+import { DataValidator } from "@/lib/data-validation"
 
 function HostDashboardContent() {
   const params = useParams()
@@ -38,9 +42,45 @@ function HostDashboardContent() {
   const [isEndingAuction, setIsEndingAuction] = useState(false)
   const [finalResults, setFinalResults] = useState<any>(null)
   const [previousGuestCount, setPreviousGuestCount] = useState(0)
+  const [previousStateHash, setPreviousStateHash] = useState("")
   
   // AuctionItemProvider에서 경매 물품 데이터 가져오기
   const { auctionItems, getAllGuests, isLoading: isLoadingItems, loadAuctionItems } = useAuctionItem()
+  
+  // 연결 상태 모니터링
+  const { connectionState, recordRequest } = useConnectionMonitor({
+    onConnectionLost: () => {
+      toast({
+        title: "연결 끊김",
+        description: "서버와의 연결이 끊어졌습니다. 자동으로 재연결을 시도합니다.",
+        variant: "destructive",
+      })
+    },
+    onConnectionRestored: () => {
+      toast({
+        title: "연결 복구",
+        description: "서버와의 연결이 복구되었습니다.",
+      })
+    }
+  })
+
+  // 오프라인 처리
+  const { isOffline, queueAction } = useOfflineHandler({
+    onOffline: () => {
+      toast({
+        title: "오프라인 상태",
+        description: "인터넷 연결이 끊어졌습니다. 연결이 복구되면 자동으로 동기화됩니다.",
+        variant: "destructive",
+      })
+    }
+  })
+
+  // 정리 로직
+  const { createInterval, createTimeout, cleanup } = useCleanup({
+    onUnmount: () => {
+      console.log("[Host] Component unmounting, cleaning up resources")
+    }
+  })
 
   useEffect(() => {
     let isPolling = true
@@ -59,35 +99,66 @@ function HostDashboardContent() {
         
         if (response.success) {
           const newState = response.state
-          const currentGuestCount = newState.guestCount || 0
           
-          // 참가자 수 변화 감지 및 알림
-          if (previousGuestCount > 0 && currentGuestCount > previousGuestCount) {
-            const newGuests = newState.guests.slice(previousGuestCount)
-            newGuests.forEach((guest: any) => {
-              toast({
-                title: "새 참가자 참여",
-                description: `${guest.nickname}님이 경매에 참여했습니다.`,
-              })
-            })
+          // 데이터 무결성 검증
+          const validation = DataValidator.validateAuctionState(newState)
+          if (!validation.isValid) {
+            console.error("[Host] Invalid auction state:", validation.errors)
+            // 데이터 복구 시도
+            const recoveredState = DataValidator.recoverAuctionState(newState)
+            newState = recoveredState
           }
           
-          setAuctionState(newState)
-          setRecentBids(newState.bids || [])
-          setJoinUrl(`${window.location.origin}/room/${roomId}`)
-          setIsConnected(true)
-          setPreviousGuestCount(currentGuestCount)
+          if (validation.warnings.length > 0) {
+            console.warn("[Host] Auction state warnings:", validation.warnings)
+          }
+          
+          const currentGuestCount = newState.guestCount || 0
+          
+          // 상태 변화 감지를 위한 해시 생성
+          const stateHash = JSON.stringify({
+            guestCount: currentGuestCount,
+            status: newState.status,
+            currentRound: newState.currentRound,
+            roundStatus: newState.roundStatus
+          })
+          
+          // 상태가 실제로 변화했을 때만 업데이트
+          if (stateHash !== previousStateHash) {
+            // 참가자 수 변화 감지 및 알림
+            if (previousGuestCount > 0 && currentGuestCount > previousGuestCount) {
+              const newGuests = newState.guests.slice(previousGuestCount)
+              newGuests.forEach((guest: any) => {
+                toast({
+                  title: "새 참가자 참여",
+                  description: `${guest.nickname}님이 경매에 참여했습니다.`,
+                })
+              })
+            }
+            
+            setAuctionState(newState)
+            setRecentBids(newState.bids || [])
+            setJoinUrl(`${window.location.origin}/room/${roomId}`)
+            setIsConnected(true)
+            setPreviousGuestCount(currentGuestCount)
+            setPreviousStateHash(stateHash)
+            
+            // 경매 물품 목록도 주기적으로 새로고침 (캐시 우선)
+            loadAuctionItems(roomId, false)
+          }
+          
+          // 연결 상태 기록
+          recordRequest(true)
           consecutiveErrors = 0
           retryCount = 0
-          
-          // 경매 물품 목록도 주기적으로 새로고침
-          loadAuctionItems()
         } else {
           console.error("[Host] Failed to get state:", response.error)
+          recordRequest(false)
           consecutiveErrors++
         }
       } catch (error) {
         console.error("[Host] Error polling room state:", error)
+        recordRequest(false)
         consecutiveErrors++
       }
       
@@ -102,7 +173,7 @@ function HostDashboardContent() {
       
       // Continue polling if still active
       if (isPolling) {
-        setTimeout(loadRoomState, 1000) // Poll every 1 second for faster updates
+        createTimeout(loadRoomState, 2000) // Poll every 2 seconds for stable updates
       }
     }
 

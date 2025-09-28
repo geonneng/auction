@@ -99,29 +99,40 @@ export function AuctionItemProvider({ children, roomId }: AuctionItemProviderPro
   }, [roomId, auctionItems])
 
   // 물품 정보 불러오기
-  const loadAuctionItems = useCallback(async (targetRoomId?: string) => {
+  const loadAuctionItems = useCallback(async (targetRoomId?: string, forceRefresh = false) => {
+    const targetRoom = targetRoomId || roomId
+    if (!targetRoom) return
+    
+    // 캐시된 데이터가 있고 강제 새로고침이 아닌 경우 스킵
+    const storageKey = getStorageKey(targetRoom)
+    const cachedData = localStorage.getItem(storageKey)
+    if (cachedData && !forceRefresh) {
+      try {
+        const parsedItems = JSON.parse(cachedData)
+        setAuctionItems(parsedItems)
+        return
+      } catch (error) {
+        console.error('[AuctionItem] Failed to parse cached data:', error)
+      }
+    }
+    
     setIsLoading(true)
     try {
-      const targetRoom = targetRoomId || roomId
-      
       // API 서버에서 먼저 조회
-      if (targetRoom) {
-        try {
-          const { auctionAPI } = await import('@/lib/api')
-          const response = await auctionAPI.getAuctionItems(targetRoom)
-          if (response.success && response.items) {
-            console.log('[AuctionItem] Loaded from API server:', response.items)
-            setAuctionItems(response.items)
-            
-            // localStorage에도 저장 (백업용)
-            const storageKey = getStorageKey(targetRoom)
-            localStorage.setItem(storageKey, JSON.stringify(response.items))
-            return
-          }
-        } catch (apiError) {
-          console.error('[AuctionItem] Failed to load from API server:', apiError)
-          // API 실패 시 localStorage에서 로드
+      try {
+        const { auctionAPI } = await import('@/lib/api')
+        const response = await auctionAPI.getAuctionItems(targetRoom)
+        if (response.success && response.items) {
+          console.log('[AuctionItem] Loaded from API server:', response.items)
+          setAuctionItems(response.items)
+          
+          // localStorage에도 저장 (백업용)
+          localStorage.setItem(storageKey, JSON.stringify(response.items))
+          return
         }
+      } catch (apiError) {
+        console.error('[AuctionItem] Failed to load from API server:', apiError)
+        // API 실패 시 localStorage에서 로드
       }
       
       // localStorage에서 로드 (API 실패 시 또는 roomId가 없는 경우)
