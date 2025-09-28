@@ -263,9 +263,10 @@ function HostDashboardContent() {
     try {
       const response = await auctionAPI.registerAuctionItem(roomId, item, auctionState.currentRound)
       if (response.success) {
+        const targetRound = auctionState.currentRound === 0 ? 1 : auctionState.currentRound + 1
         toast({
           title: "성공",
-          description: `"${item.name}"이(가) 라운드 ${auctionState.currentRound}에 등록되었습니다.`,
+          description: `"${item.name}"이(가) 라운드 ${targetRound}에 등록되었습니다.`,
         })
         setIsItemDialogOpen(false)
       } else {
@@ -810,7 +811,9 @@ function HostDashboardContent() {
                         <DialogHeader>
                           <DialogTitle>경매 물품 선택</DialogTitle>
                           <DialogDescription>
-                            라운드 {auctionState.currentRound}에 등록할 경매 물품을 선택하세요.
+                            {auctionState.currentRound === 0 
+                              ? "라운드 1에 등록할 경매 물품을 선택하세요."
+                              : `라운드 ${auctionState.currentRound + 1}에 등록할 경매 물품을 선택하세요.`}
                           </DialogDescription>
                         </DialogHeader>
                         
