@@ -216,18 +216,7 @@ class AuctionRoom {
       winner
     }
     
-    // 낙찰자가 있고 경매 물품이 등록되어 있으면 자동으로 낙찰 금액 분배
-    if (winner && this.currentRoundItem) {
-      try {
-        this.distributeWinningAmount(winner.nickname, winner.amount, this.currentRoundItem.item.ownerNickname)
-        console.log(`[API] Auto-distributed ${winner.amount}원 from ${winner.nickname} to ${this.currentRoundItem.item.ownerNickname}`)
-      } catch (error) {
-        console.error("[API] Failed to auto-distribute winning amount:", error)
-      }
-    }
-    
-    // 라운드 종료 후 경매 물품 초기화 (새 라운드에서 새 물품 등록 가능하도록)
-    this.currentRoundItem = null
+    // 라운드 종료 후 경매 물품은 유지 (낙찰 금액 전달 후 수동으로 초기화)
     
     return roundResults
   }
@@ -270,9 +259,11 @@ class AuctionRoom {
       throw new Error("물품 등록자를 찾을 수 없습니다")
     }
 
-    // 낙찰자에게 물품 전달 (실제로는 자본금 차감)
     // 물품 등록자에게 낙찰금액 전달 (자본금 증가)
     owner.capital += amount
+
+    // 낙찰 금액 분배 후 경매 물품 초기화
+    this.currentRoundItem = null
 
     return {
       success: true,

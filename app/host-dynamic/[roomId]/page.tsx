@@ -35,6 +35,7 @@ function DynamicHostDashboardContent() {
   const [bulkCapital, setBulkCapital] = useState("")
   const [isBulkUpdating, setIsBulkUpdating] = useState(false)
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false)
+  const [isDistributingAmount, setIsDistributingAmount] = useState(false)
   
   // AuctionItemProvider에서 경매 물품 데이터 가져오기
   const { auctionItems, getAllGuests, isLoading: isLoadingItems } = useAuctionItem()
@@ -132,6 +133,9 @@ function DynamicHostDashboardContent() {
       const response = await auctionAPI.startRound(auctionState.id)
       if (response.success) {
         setAuctionState(response.state)
+        setRecentBids([]) // 새 라운드 시작 시 입찰 현황 초기화
+        setRoundResults(null) // 이전 라운드 결과 초기화
+        setCurrentHighestBid(null) // 최고 입찰 초기화
         toast({
           title: "라운드 시작",
           description: `라운드 ${response.state.currentRound}이 시작되었습니다!`,
@@ -285,6 +289,42 @@ function DynamicHostDashboardContent() {
         description: "경매 물품 등록에 실패했습니다.",
         variant: "destructive",
       })
+    }
+  }
+
+  const handleDistributeWinningAmount = async () => {
+    if (!auctionState || !roundResults?.winner || !auctionState.currentRoundItem) return
+
+    setIsDistributingAmount(true)
+    try {
+      const response = await auctionAPI.distributeWinningAmount(
+        roomId,
+        roundResults.winner.nickname,
+        roundResults.winner.amount,
+        auctionState.currentRoundItem.item.ownerNickname
+      )
+      
+      if (response.success) {
+        toast({
+          title: "성공",
+          description: `${roundResults.winner.amount?.toLocaleString()}원이 ${auctionState.currentRoundItem.item.ownerNickname}에게 전달되었습니다.`,
+        })
+      } else {
+        toast({
+          title: "오류",
+          description: response.error || "낙찰 금액 전달에 실패했습니다.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Failed to distribute winning amount:", error)
+      toast({
+        title: "오류",
+        description: "낙찰 금액 전달에 실패했습니다.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDistributingAmount(false)
     }
   }
 
@@ -645,6 +685,32 @@ function DynamicHostDashboardContent() {
                           <div className="mt-1">
                             <div className="font-medium text-emerald-800">{auctionState.currentRoundItem.item.name}</div>
                             <div className="text-sm text-emerald-600">등록자: {auctionState.currentRoundItem.item.ownerNickname}</div>
+                            
+                            {/* 라운드 종료 후 낙찰 금액 표시 및 전달 버튼 */}
+                            {roundResults?.winner && (
+                              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                <div className="flex items-center gap-2 text-green-700 mb-2">
+                                  <TrendingUp className="h-4 w-4" />
+                                  <span className="font-semibold">낙찰 결과:</span>
+                                </div>
+                                <div className="text-sm">
+                                  <div className="font-medium text-green-800">
+                                    낙찰자: {roundResults.winner.nickname}
+                                  </div>
+                                  <div className="font-bold text-lg text-green-600">
+                                    낙찰 금액: {roundResults.winner.amount?.toLocaleString()}원
+                                  </div>
+                                </div>
+                                <Button
+                                  onClick={handleDistributeWinningAmount}
+                                  disabled={isDistributingAmount}
+                                  size="sm"
+                                  className="mt-2 bg-green-600 hover:bg-green-700"
+                                >
+                                  {isDistributingAmount ? "전달 중..." : "낙찰 금액 전달"}
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
