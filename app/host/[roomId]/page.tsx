@@ -35,6 +35,8 @@ function HostDashboardContent() {
   const [isBulkUpdating, setIsBulkUpdating] = useState(false)
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false)
   const [isDistributingAmount, setIsDistributingAmount] = useState(false)
+  const [isEndingAuction, setIsEndingAuction] = useState(false)
+  const [finalResults, setFinalResults] = useState<any>(null)
   
   // AuctionItemProvider에서 경매 물품 데이터 가져오기
   const { auctionItems, getAllGuests, isLoading: isLoadingItems, loadAuctionItems } = useAuctionItem()
@@ -329,6 +331,38 @@ function HostDashboardContent() {
       })
     } finally {
       setIsDistributingAmount(false)
+    }
+  }
+
+  const handleEndAuction = async () => {
+    if (!auctionState) return
+
+    setIsEndingAuction(true)
+    try {
+      const response = await auctionAPI.endAuction(roomId)
+      if (response.success) {
+        setAuctionState(response.state)
+        setFinalResults(response.finalResults)
+        toast({
+          title: "경매 종료",
+          description: "경매가 성공적으로 종료되었습니다.",
+        })
+      } else {
+        toast({
+          title: "오류",
+          description: response.error || "경매 종료에 실패했습니다.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Failed to end auction:", error)
+      toast({
+        title: "연결 오류",
+        description: "서버에 연결할 수 없습니다.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsEndingAuction(false)
     }
   }
 
@@ -800,6 +834,17 @@ function HostDashboardContent() {
                       </Button>
                     </div>
                     
+                    {/* 경매 종료 버튼 */}
+                    <Button
+                      onClick={handleEndAuction}
+                      disabled={auctionState.status !== "ACTIVE" || isEndingAuction}
+                      size="lg"
+                      variant="destructive"
+                      className="w-full"
+                    >
+                      {isEndingAuction ? "경매 종료 중..." : "경매 종료"}
+                    </Button>
+                    
                     {/* 경매 물품 등록 버튼 */}
                     <Dialog open={isItemDialogOpen} onOpenChange={setIsItemDialogOpen}>
                       <DialogTrigger asChild>
@@ -879,6 +924,81 @@ function HostDashboardContent() {
                 )}
               </CardContent>
             </Card>
+
+            {/* 최종 결과 표시 */}
+            {finalResults && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-6 w-6" />
+                    경매 최종 결과
+                  </CardTitle>
+                  <CardDescription>
+                    총 {finalResults.totalRounds}라운드 진행된 경매의 최종 결과입니다.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {/* 참가자별 결과 */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">참가자별 최종 결과</h3>
+                      <div className="grid gap-4">
+                        {finalResults.participants.map((participant: any, index: number) => (
+                          <Card key={participant.nickname} className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                <Badge variant="outline" className="text-lg px-3 py-1">
+                                  {index + 1}위
+                                </Badge>
+                                <h4 className="text-xl font-bold">{participant.nickname}</h4>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-2xl font-bold text-primary">
+                                  {participant.finalCapital.toLocaleString()}원
+                                </div>
+                                <div className="text-sm text-muted-foreground">최종 자본</div>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <div className="text-muted-foreground">총 입찰 금액</div>
+                                <div className="font-semibold">
+                                  {participant.totalBidAmount.toLocaleString()}원
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-muted-foreground">낙찰 받은 물품</div>
+                                <div className="font-semibold">
+                                  {participant.wonItems.length}개
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* 낙찰 받은 물품 상세 */}
+                            {participant.wonItems.length > 0 && (
+                              <div className="mt-3 pt-3 border-t">
+                                <div className="text-sm text-muted-foreground mb-2">낙찰 내역:</div>
+                                <div className="space-y-1">
+                                  {participant.wonItems.map((item: any, itemIndex: number) => (
+                                    <div key={itemIndex} className="flex justify-between text-sm">
+                                      <span>라운드 {item.round}</span>
+                                      <span className="font-semibold">
+                                        {item.amount.toLocaleString()}원
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>

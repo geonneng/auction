@@ -222,6 +222,48 @@ class AuctionRoom {
     return roundResults
   }
 
+  endAuction() {
+    if (this.status !== "ACTIVE") {
+      throw new Error("활성화된 경매가 없습니다")
+    }
+    this.status = "ENDED"
+    this.roundStatus = "ENDED"
+    
+    // 최종 결과 계산
+    const finalResults = {
+      totalRounds: this.currentRound,
+      participants: Array.from(this.guests.values()).map(guest => ({
+        nickname: guest.nickname,
+        finalCapital: guest.capital,
+        totalBidAmount: this.initialCapital - guest.capital,
+        wonItems: this.getWonItems(guest.nickname)
+      })),
+      allBids: this.bids,
+      auctionItems: Array.from(this.auctionItems.values())
+    }
+    
+    return finalResults
+  }
+
+  getWonItems(nickname: string) {
+    // 각 라운드별로 낙찰자 확인
+    const wonItems = []
+    for (let round = 1; round <= this.currentRound; round++) {
+      const roundBids = this.bids.filter(bid => bid.round === round)
+      if (roundBids.length > 0) {
+        const winner = roundBids.reduce((max, bid) => bid.amount > max.amount ? bid : max)
+        if (winner.nickname === nickname) {
+          wonItems.push({
+            round,
+            amount: winner.amount,
+            timestamp: winner.timestamp
+          })
+        }
+      }
+    }
+    return wonItems
+  }
+
   registerAuctionItem(itemData: any, round: number) {
     if (this.roundStatus !== "WAITING" && this.roundStatus !== "ENDED") {
       throw new Error("라운드가 대기 상태이거나 종료된 상태일 때만 물품을 등록할 수 있습니다")
@@ -464,6 +506,25 @@ export async function POST(request: NextRequest) {
             success: true, 
             state: endRoom.getState(),
             roundResults
+          })
+        } catch (error: any) {
+          return NextResponse.json({ success: false, error: error.message })
+        }
+
+      case 'endAuction':
+        const { roomId: endAuctionRoomId } = data
+        const endAuctionRoom = auctionRooms.get(endAuctionRoomId)
+        
+        if (!endAuctionRoom) {
+          return NextResponse.json({ success: false, error: "존재하지 않는 방입니다" })
+        }
+
+        try {
+          const finalResults = endAuctionRoom.endAuction()
+          return NextResponse.json({ 
+            success: true, 
+            state: endAuctionRoom.getState(),
+            finalResults
           })
         } catch (error: any) {
           return NextResponse.json({ success: false, error: error.message })

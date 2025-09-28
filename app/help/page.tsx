@@ -35,7 +35,7 @@ export default function HelpPage() {
             <BookOpen className="h-6 w-6 text-white" />
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold text-emerald-600">
-            BID 도움말
+            BID(입찰하다) 도움말
           </h1>
         </div>
         <p className="text-lg sm:text-xl text-emerald-700 max-w-2xl mx-auto">
@@ -53,7 +53,7 @@ export default function HelpPage() {
           <Card className="border-emerald-200 bg-emerald-50/50">
             <CardContent className="pt-6">
               <p className="text-base sm:text-lg text-emerald-700">
-                <strong>BID</strong>는 교육용 실시간 경매 플랫폼으로, 참가자들이 가상의 자본금으로 경매에 참여할 수 있는 웹 애플리케이션입니다. 
+                <strong>BID(입찰하다)</strong>는 교육용 실시간 경매 플랫폼으로, 참가자들이 가상의 자본금으로 경매에 참여할 수 있는 웹 애플리케이션입니다. 
                 실제 경제 활동의 핵심 요소들을 체험할 수 있도록 설계되었으며, 다양한 연령대와 상황에서 활용할 수 있습니다.
               </p>
             </CardContent>
@@ -142,7 +142,6 @@ export default function HelpPage() {
                   <li>• <strong>물품 등록</strong>: 참가자가 사이드바를 통해 경매 물품 등록</li>
                   <li>• <strong>물품 선택</strong>: 호스트가 등록된 물품 중 라운드용 물품 선택</li>
                   <li>• <strong>물품 정보 표시</strong>: 물품명, 설명, 등록자 정보 표시</li>
-                  <li>• <strong>등록자 닉네임 표시</strong>: 물품 등록자의 닉네임 명확히 표시</li>
                 </ul>
               </CardContent>
             </Card>
@@ -156,7 +155,6 @@ export default function HelpPage() {
                 <ul className="text-sm sm:text-base space-y-2 text-green-700">
                   <li>• <strong>낙찰자 결정</strong>: 라운드 종료 시 최고 입찰자 자동 선정</li>
                   <li>• <strong>낙찰 금액 전달</strong>: 물품 등록자에게 낙찰 금액 전달 기능</li>
-                  <li>• <strong>수동 분배 시스템</strong>: 호스트가 직접 낙찰 금액 전달 버튼 클릭</li>
                   <li>• <strong>자본금 업데이트</strong>: 전달 후 물품 등록자 자본금 자동 증가</li>
                 </ul>
               </CardContent>
@@ -172,7 +170,6 @@ export default function HelpPage() {
                   <li>• <strong>라운드 시작/종료</strong>: 호스트가 라운드 진행 상황 제어</li>
                   <li>• <strong>상태 표시</strong>: WAITING (대기) / ACTIVE (진행) / ENDED (종료)</li>
                   <li>• <strong>라운드별 물품 등록</strong>: 각 라운드마다 새로운 물품 등록 가능</li>
-                  <li>• <strong>자동 초기화</strong>: 라운드 종료 후 다음 라운드 준비</li>
                 </ul>
               </CardContent>
             </Card>
@@ -276,11 +273,11 @@ export default function HelpPage() {
           </div>
         </section>
 
-        {/* 교육적 가치 */}
+        {/* 기대효과 */}
         <section>
           <h2 className="text-2xl sm:text-3xl font-bold text-emerald-800 mb-6 flex items-center gap-3">
             <BookOpen className="h-8 w-8" />
-            🎯 교육적 가치
+            🎯 기대효과
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
             <Card className="border-teal-200 bg-teal-50/50">
@@ -314,60 +311,56 @@ export default function HelpPage() {
               </CardContent>
             </Card>
           </div>
-        </section>
-
-        {/* 사용 시나리오 */}
-        <section>
-          <h2 className="text-2xl sm:text-3xl font-bold text-emerald-800 mb-6 flex items-center gap-3">
-            <Play className="h-8 w-8" />
-            🚀 사용 시나리오
-          </h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <Card className="border-lime-200 bg-lime-50/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lime-800">
-                  <BookOpen className="h-6 w-6" />
-                  1. 교육 현장
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="text-sm space-y-1 text-lime-700">
-                  <li>• 경제 수업: 시장 메커니즘 실습</li>
-                  <li>• 경영 수업: 경매 전략 및 의사결정 학습</li>
-                  <li>• 수학 수업: 확률과 통계 개념 적용</li>
-                </ul>
-              </CardContent>
-            </Card>
-            <Card className="border-yellow-200 bg-yellow-50/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-yellow-800">
-                  <Users className="h-6 w-6" />
-                  2. 기업 교육
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="text-sm space-y-1 text-yellow-700">
-                  <li>• 신입사원 교육: 협상 스킬 및 의사결정 능력 향상</li>
-                  <li>• 팀 빌딩: 팀원 간 경쟁과 협력을 통한 유대감 형성</li>
-                  <li>• 리더십 교육: 호스트 역할을 통한 리더십 경험</li>
-                </ul>
-              </CardContent>
-            </Card>
-            <Card className="border-rose-200 bg-rose-50/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-rose-800">
-                  <Target className="h-6 w-6" />
-                  3. 가족/친구 모임
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="text-sm space-y-1 text-rose-700">
-                  <li>• 재미있는 게임: 가상 자본으로 하는 재미있는 경매 게임</li>
-                  <li>• 전략 게임: 심리전과 전략을 통한 흥미로운 대결</li>
-                  <li>• 소통 도구: 새로운 형태의 소통과 상호작용 경험</li>
-                </ul>
-              </CardContent>
-            </Card>
+          
+          <div className="mt-6">
+            <h3 className="text-xl font-bold text-emerald-700 mb-4">활용방안</h3>
+            <div className="grid md:grid-cols-3 gap-6">
+              <Card className="border-lime-200 bg-lime-50/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lime-800">
+                    <BookOpen className="h-6 w-6" />
+                    미술 감상 수업
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="text-sm space-y-1 text-lime-700">
+                    <li>• 미술 작품의 가치 평가</li>
+                    <li>• 작가별 스타일과 특징 이해</li>
+                    <li>• 미술사적 맥락에서의 작품 감상</li>
+                  </ul>
+                </CardContent>
+              </Card>
+              <Card className="border-yellow-200 bg-yellow-50/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-yellow-800">
+                    <Target className="h-6 w-6" />
+                    미술 작품 피드백
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="text-sm space-y-1 text-yellow-700">
+                    <li>• 학생 작품의 객관적 평가</li>
+                    <li>• 창의성과 기술력의 균형</li>
+                    <li>• 동료 간 상호 피드백 문화</li>
+                  </ul>
+                </CardContent>
+              </Card>
+              <Card className="border-rose-200 bg-rose-50/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-rose-800">
+                    <Globe className="h-6 w-6" />
+                    문화유산 수업
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="text-sm space-y-1 text-rose-700">
+                    <li>• 문화유산의 역사적 가치</li>
+                    <li>• 보존의 중요성과 의미</li>
+                    <li>• 전통문화의 현대적 해석</li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </section>
 

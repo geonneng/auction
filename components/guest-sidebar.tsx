@@ -151,50 +151,50 @@ export function GuestSidebar({ roomId, guestName }: GuestSidebarProps) {
 
       {/* 물품 등록/수정 다이얼로그 */}
       <Dialog open={isItemDialogOpen} onOpenChange={setIsItemDialogOpen}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2 text-xl">
-              <Package className="h-6 w-6" />
+            <DialogTitle className="flex items-center space-x-2 text-lg sm:text-xl">
+              <Package className="h-5 w-5 sm:h-6 sm:w-6" />
               <span>경매 물품 {auctionItem ? '수정' : '등록'}</span>
             </DialogTitle>
-            <DialogDescription className="text-base">
+            <DialogDescription className="text-sm sm:text-base">
               경매에 출품할 물품의 정보를 입력해주세요.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="item-name" className="text-base font-medium">물품명 *</Label>
+              <Label htmlFor="item-name" className="text-sm sm:text-base font-medium">물품명 *</Label>
               <Input
                 id="item-name"
                 placeholder="예: 빈티지 책상"
                 value={itemName}
                 onChange={(e) => setItemName(e.target.value)}
-                className="text-base h-12"
+                className="text-sm sm:text-base h-10 sm:h-12"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="item-description" className="text-base font-medium">물품 설명</Label>
+              <Label htmlFor="item-description" className="text-sm sm:text-base font-medium">물품 설명</Label>
               <Textarea
                 id="item-description"
                 placeholder="물품에 대한 상세한 설명을 입력해주세요..."
                 value={itemDescription}
                 onChange={(e) => setItemDescription(e.target.value)}
-                rows={4}
-                className="text-base"
+                rows={3}
+                className="text-sm sm:text-base"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="item-image" className="text-base font-medium">물품 사진</Label>
-              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6">
+              <Label htmlFor="item-image" className="text-sm sm:text-base font-medium">물품 사진</Label>
+              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-3 sm:p-6">
                 {imagePreview ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     <img
                       src={imagePreview}
                       alt="미리보기"
-                      className="w-full h-48 object-contain bg-stone-50 rounded-lg"
+                      className="w-full h-32 sm:h-48 object-contain bg-stone-50 rounded-lg"
                     />
                     <Button
                       variant="outline"
@@ -202,16 +202,16 @@ export function GuestSidebar({ roomId, guestName }: GuestSidebarProps) {
                         setImagePreview(null)
                         setItemImage(null)
                       }}
-                      className="w-full"
+                      className="w-full text-sm"
                     >
                       사진 제거
                     </Button>
                   </div>
                 ) : (
                   <div className="text-center">
-                    <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <Upload className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-2 sm:mb-3" />
                     <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         클릭하여 사진을 업로드하세요
                       </p>
                       <Input
@@ -219,7 +219,7 @@ export function GuestSidebar({ roomId, guestName }: GuestSidebarProps) {
                         type="file"
                         accept="image/*"
                         onChange={handleImageChange}
-                        className="cursor-pointer"
+                        className="cursor-pointer text-xs sm:text-sm"
                       />
                     </div>
                   </div>
@@ -237,18 +237,18 @@ export function GuestSidebar({ roomId, guestName }: GuestSidebarProps) {
               </Alert>
             )}
 
-            <div className="flex space-x-3 pt-4">
+            <div className="flex space-x-2 sm:space-x-3 pt-2 sm:pt-4">
               <Button
                 variant="outline"
                 onClick={() => setIsItemDialogOpen(false)}
-                className="flex-1"
+                className="flex-1 text-sm sm:text-base"
               >
                 취소
               </Button>
               <Button
                 onClick={handleSaveItem}
                 disabled={isLoading}
-                className="flex-1"
+                className="flex-1 text-sm sm:text-base"
               >
                 {isLoading ? "저장 중..." : (auctionItem ? "수정하기" : "등록하기")}
               </Button>
@@ -270,30 +270,30 @@ export function GuestSidebar({ roomId, guestName }: GuestSidebarProps) {
               <Eye className="h-5 w-5" />
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-2xl max-w-4xl">
+          <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center space-x-2 text-xl">
-                <Package className="h-6 w-6" />
+              <DialogTitle className="flex items-center space-x-2 text-lg sm:text-xl">
+                <Package className="h-5 w-5 sm:h-6 sm:w-6" />
                 <span>내 경매 물품 정보</span>
               </DialogTitle>
-              <DialogDescription className="text-base">
+              <DialogDescription className="text-sm sm:text-base">
                 현재 등록된 물품의 상세 정보입니다.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {auctionItem.image && (
                 <div className="relative">
                   <img
                     src={auctionItem.image}
                     alt={auctionItem.name}
-                    className="w-full h-80 object-contain bg-stone-50 rounded-xl shadow-lg"
+                    className="w-full h-48 sm:h-80 object-contain bg-stone-50 rounded-xl shadow-lg"
                   />
                 </div>
               )}
-              <div className="space-y-4">
-                <h3 className="font-bold text-2xl mb-4 text-center">{auctionItem.name}</h3>
+              <div className="space-y-3 sm:space-y-4">
+                <h3 className="font-bold text-lg sm:text-2xl mb-3 sm:mb-4 text-center">{auctionItem.name}</h3>
                 {auctionItem.description && (
-                  <p className="text-lg leading-relaxed text-foreground bg-muted/30 p-4 rounded-lg">
+                  <p className="text-sm sm:text-lg leading-relaxed text-foreground bg-muted/30 p-3 sm:p-4 rounded-lg">
                     {auctionItem.description}
                   </p>
                 )}
