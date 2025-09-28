@@ -118,6 +118,37 @@ export class AuctionAPI {
       method: 'GET'
     })
   }
+
+  async getAuctionItems(roomId: string) {
+    return this.makeRequest(`${this.baseUrl}?roomId=${roomId}&action=getAuctionItems`, {
+      method: 'GET'
+    })
+  }
+
+  async registerAuctionItem(roomId: string, itemId: string, round: number) {
+    return this.makeRequest(this.baseUrl, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'registerAuctionItem',
+        roomId,
+        itemId,
+        round
+      })
+    })
+  }
+
+  async distributeWinningAmount(roomId: string, winnerNickname: string, amount: number, ownerNickname: string) {
+    return this.makeRequest(this.baseUrl, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'distributeWinningAmount',
+        roomId,
+        winnerNickname,
+        amount,
+        ownerNickname
+      })
+    })
+  }
 }
 
 export const auctionAPI = new AuctionAPI()

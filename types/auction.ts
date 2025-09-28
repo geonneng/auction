@@ -26,6 +26,7 @@ export interface AuctionState {
   guestCount: number
   currentRound: number
   roundStatus: "WAITING" | "ACTIVE" | "ENDED"
+  currentRoundItem?: RoundAuctionItem
 }
 
 export interface HostData {
@@ -41,4 +42,18 @@ export interface GuestData {
   currentRound?: number
   roundStatus?: "WAITING" | "ACTIVE" | "ENDED"
   hasBidInCurrentRound?: boolean
+}
+
+export interface AuctionItem {
+  id: string
+  name: string
+  description: string
+  imageUrl?: string
+  ownerNickname: string
+  registeredAt: Date
+}
+
+export interface RoundAuctionItem {
+  item: AuctionItem
+  registeredAt: Date
 }
