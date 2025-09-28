@@ -276,7 +276,7 @@ function HostDashboardContent() {
     if (!auctionState) return
 
     try {
-      const response = await auctionAPI.registerAuctionItem(roomId, item.id, auctionState.currentRound)
+      const response = await auctionAPI.registerAuctionItem(roomId, item, auctionState.currentRound)
       if (response.success) {
         toast({
           title: "성공",

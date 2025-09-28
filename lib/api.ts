@@ -125,13 +125,13 @@ export class AuctionAPI {
     })
   }
 
-  async registerAuctionItem(roomId: string, itemId: string, round: number) {
+  async registerAuctionItem(roomId: string, itemData: any, round: number) {
     return this.makeRequest(this.baseUrl, {
       method: 'POST',
       body: JSON.stringify({
         action: 'registerAuctionItem',
         roomId,
-        itemId,
+        itemData,
         round
       })
     })
