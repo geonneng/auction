@@ -43,6 +43,7 @@ function HostDashboardContent() {
   const [finalResults, setFinalResults] = useState<any>(null)
   const [previousGuestCount, setPreviousGuestCount] = useState(0)
   const [previousStateHash, setPreviousStateHash] = useState("")
+  const [lastGuestJoinTime, setLastGuestJoinTime] = useState(0)
   
   // AuctionItemProvider에서 경매 물품 데이터 가져오기
   const { auctionItems, getAllGuests, isLoading: isLoadingItems, loadAuctionItems } = useAuctionItem()
@@ -98,6 +99,7 @@ function HostDashboardContent() {
         console.log("[Host] Poll response:", response)
         console.log("[Host] Guests in response:", response.state?.guests)
         console.log("[Host] Guest count in response:", response.state?.guestCount)
+        console.log("[Host] Last guest join time:", response.state?.lastGuestJoinTime)
         
         if (response.success) {
           const newState = response.state
@@ -116,6 +118,7 @@ function HostDashboardContent() {
           }
           
           const currentGuestCount = newState.guestCount || 0
+          const currentLastGuestJoinTime = newState.lastGuestJoinTime || 0
           
           // 상태 변화 감지를 위한 해시 생성
           const stateHash = JSON.stringify({
@@ -123,7 +126,8 @@ function HostDashboardContent() {
             status: newState.status,
             currentRound: newState.currentRound,
             roundStatus: newState.roundStatus,
-            guests: newState.guests.map(g => g.nickname).sort() // 참가자 목록도 해시에 포함
+            guests: newState.guests.map(g => g.nickname).sort(), // 참가자 목록도 해시에 포함
+            lastGuestJoinTime: currentLastGuestJoinTime // 참가자 참여 시간도 해시에 포함
           })
           
           // 상태가 실제로 변화했을 때만 업데이트
@@ -145,6 +149,7 @@ function HostDashboardContent() {
             setIsConnected(true)
             setPreviousGuestCount(currentGuestCount)
             setPreviousStateHash(stateHash)
+            setLastGuestJoinTime(currentLastGuestJoinTime)
             
             // 경매 물품 목록도 주기적으로 새로고침 (캐시 우선)
             // 물품 로딩은 별도로 처리하여 참가자 인식에 영향 주지 않도록 함
@@ -161,6 +166,7 @@ function HostDashboardContent() {
               setAuctionState(newState)
               setRecentBids(newState.bids || [])
               setPreviousGuestCount(currentGuestCount)
+              setLastGuestJoinTime(currentLastGuestJoinTime)
               
               if (currentGuestCount > previousGuestCount) {
                 const newGuests = newState.guests.slice(previousGuestCount)
@@ -185,8 +191,18 @@ function HostDashboardContent() {
                 // 참가자 목록이 변경된 경우 강제로 상태 업데이트
                 setAuctionState(newState)
                 setRecentBids(newState.bids || [])
+                setLastGuestJoinTime(currentLastGuestJoinTime)
               }
             }
+          }
+          
+          // 마지막 수단: 매 10번째 폴링마다 강제로 상태 업데이트 (참가자 인식 보장)
+          if (retryCount % 10 === 0) {
+            console.log(`[Host] Force updating state every 10 polls (poll #${retryCount})`)
+            setAuctionState(newState)
+            setRecentBids(newState.bids || [])
+            setPreviousGuestCount(currentGuestCount)
+            setLastGuestJoinTime(currentLastGuestJoinTime)
           }
           
           // 연결 상태 기록

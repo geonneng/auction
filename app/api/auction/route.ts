@@ -21,6 +21,7 @@ class AuctionRoom {
     this.currentRoundItem = null // 현재 라운드의 경매 물품
     this.auctionItems = new Map() // nickname -> AuctionItem (게스트들이 등록한 물품들)
     this.createdAt = new Date()
+    this.lastGuestJoinTime = 0 // 마지막 참가자 참여 시간
   }
 
   addGuest(socketId: string, nickname: string) {
@@ -365,6 +366,7 @@ class AuctionRoom {
       roundStatus: this.roundStatus,
       currentHighestBid: highestBid,
       currentRoundItem: this.currentRoundItem,
+      lastGuestJoinTime: this.lastGuestJoinTime, // 참가자 변화 감지용
     }
   }
 }
@@ -445,6 +447,10 @@ export async function POST(request: NextRequest) {
           const guest = joinRoom.guests.get(nickname)
           
           console.log(`[API] Guest ${nickname} joined room ${joinRoomId}. Total guests: ${joinRoom.guests.size}`)
+          console.log(`[API] Current guest list:`, Array.from(joinRoom.guests.values()).map(g => g.nickname))
+          
+          // 참가자가 추가되었다는 것을 명시적으로 표시
+          joinRoom.lastGuestJoinTime = Date.now()
           
           return NextResponse.json({
             success: true,
@@ -455,7 +461,8 @@ export async function POST(request: NextRequest) {
             roundStatus: joinRoom.roundStatus,
             hasBidInCurrentRound: guest.hasBidInCurrentRound,
             guestCount: joinRoom.guests.size,
-            totalGuests: Array.from(joinRoom.guests.values()).map(g => g.nickname)
+            totalGuests: Array.from(joinRoom.guests.values()).map(g => g.nickname),
+            lastGuestJoinTime: joinRoom.lastGuestJoinTime // 참가자 추가 시점
           })
         } catch (error: any) {
           console.error(`[API] Failed to add guest ${nickname} to room ${joinRoomId}:`, error)
