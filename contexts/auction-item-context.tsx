@@ -101,7 +101,10 @@ export function AuctionItemProvider({ children, roomId }: AuctionItemProviderPro
   // 물품 정보 불러오기
   const loadAuctionItems = useCallback(async (targetRoomId?: string, forceRefresh = false) => {
     const targetRoom = targetRoomId || roomId
-    if (!targetRoom) return
+    if (!targetRoom) {
+      console.warn('[AuctionItem] No room ID provided for loading items')
+      return
+    }
     
     // 캐시된 데이터가 있고 강제 새로고침이 아닌 경우 스킵
     const storageKey = getStorageKey(targetRoom)
@@ -113,6 +116,7 @@ export function AuctionItemProvider({ children, roomId }: AuctionItemProviderPro
         return
       } catch (error) {
         console.error('[AuctionItem] Failed to parse cached data:', error)
+        // 캐시 파싱 실패 시 계속 진행
       }
     }
     
@@ -127,7 +131,11 @@ export function AuctionItemProvider({ children, roomId }: AuctionItemProviderPro
           setAuctionItems(response.items)
           
           // localStorage에도 저장 (백업용)
-          localStorage.setItem(storageKey, JSON.stringify(response.items))
+          try {
+            localStorage.setItem(storageKey, JSON.stringify(response.items))
+          } catch (storageError) {
+            console.warn('[AuctionItem] Failed to save to localStorage:', storageError)
+          }
           return
         }
       } catch (apiError) {
@@ -136,17 +144,21 @@ export function AuctionItemProvider({ children, roomId }: AuctionItemProviderPro
       }
       
       // localStorage에서 로드 (API 실패 시 또는 roomId가 없는 경우)
-      const storageKey = getStorageKey(targetRoom)
       const storedItems = localStorage.getItem(storageKey)
       
       if (storedItems) {
-        const items = JSON.parse(storedItems) as { [guestName: string]: AuctionItem }
-        setAuctionItems(items)
+        try {
+          const items = JSON.parse(storedItems) as { [guestName: string]: AuctionItem }
+          setAuctionItems(items)
+        } catch (parseError) {
+          console.error('[AuctionItem] Failed to parse stored items:', parseError)
+          setAuctionItems({})
+        }
       } else {
         setAuctionItems({})
       }
     } catch (error) {
-      console.error('Failed to load auction items:', error)
+      console.error('[AuctionItem] Failed to load auction items:', error)
       setAuctionItems({})
     } finally {
       setIsLoading(false)

@@ -308,6 +308,16 @@ export default function GuestRoom() {
           }
         }, 500) // 0.5초 후 즉시 상태 확인
         
+        // 호스트 페이지에 참가자 참여 알림을 위한 추가 요청
+        setTimeout(async () => {
+          try {
+            // 호스트 페이지가 참가자 참여를 감지할 수 있도록 추가 요청
+            await auctionAPI.getState(roomId)
+          } catch (error) {
+            console.error("[Guest] Failed to notify host of participation:", error)
+          }
+        }, 1000) // 1초 후 호스트 알림
+        
         toast({
           title: "참여 완료",
           description: `${response.nickname}님으로 경매에 참여했습니다.`,

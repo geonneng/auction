@@ -9,10 +9,14 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Wallet, Clock, TrendingUp, AlertCircle } from "lucide-react"
+import { Wallet, Clock, TrendingUp, AlertCircle, Package } from "lucide-react"
 import { auctionAPI } from "@/lib/api"
 import type { GuestData, RoundResults } from "@/types/auction"
 import { toast } from "@/hooks/use-toast"
+import { useConnectionMonitor } from "@/hooks/use-connection-monitor"
+import { useCleanup } from "@/hooks/use-cleanup"
+import { useOfflineHandler } from "@/hooks/use-offline-handler"
+import { DataValidator } from "@/lib/data-validation"
 import { GuestLayout } from "@/components/guest-layout"
 import { AuctionItemProvider } from "@/contexts/auction-item-context"
 
@@ -31,6 +35,56 @@ export default function DynamicGuestRoom() {
   const [error, setError] = useState("")
   const [roundResults, setRoundResults] = useState<RoundResults | null>(null)
   const [canBid, setCanBid] = useState(true)
+  const [previousStateHash, setPreviousStateHash] = useState("")
+  const [currentRoundItem, setCurrentRoundItem] = useState<any>(null)
+  
+  // 연결 상태 모니터링
+  const { connectionState, recordRequest } = useConnectionMonitor({
+    onConnectionLost: () => {
+      toast({
+        title: "연결 끊김",
+        description: "서버와의 연결이 끊어졌습니다. 자동으로 재연결을 시도합니다.",
+        variant: "destructive",
+      })
+    },
+    onConnectionRestored: () => {
+      toast({
+        title: "연결 복구",
+        description: "서버와의 연결이 복구되었습니다.",
+      })
+    }
+  })
+
+  // 오프라인 처리
+  const { isOffline, queueAction } = useOfflineHandler({
+    onOffline: () => {
+      toast({
+        title: "오프라인 상태",
+        description: "인터넷 연결이 끊어졌습니다. 연결이 복구되면 자동으로 동기화됩니다.",
+        variant: "destructive",
+      })
+    }
+  })
+
+  // 정리 로직
+  const { createInterval, createTimeout, cleanup } = useCleanup({
+    onUnmount: () => {
+      console.log("[DynamicGuest] Component unmounting, cleaning up resources")
+    }
+  })
+
+  // 현재 라운드의 경매 물품 정보 가져오기
+  const loadCurrentRoundItem = async () => {
+    try {
+      const response = await auctionAPI.getCurrentRoundItem(roomId)
+      if (response.success) {
+        setCurrentRoundItem(response.currentRoundItem)
+        console.log("[DynamicGuest] Current round item loaded:", response.currentRoundItem)
+      }
+    } catch (error) {
+      console.error("[DynamicGuest] Failed to load current round item:", error)
+    }
+  }
   const [currentHighestBid, setCurrentHighestBid] = useState<any>(null)
 
   // Check if room exists on mount and poll for updates
@@ -86,6 +140,9 @@ export default function DynamicGuestRoom() {
               const dynamicCanBid = response.state.roundStatus === "ACTIVE" && currentGuest.capital > 0
               console.log("[Dynamic Guest] Dynamic bid - always setting canBid to:", dynamicCanBid)
               setCanBid(dynamicCanBid)
+              
+              // 현재 라운드의 경매 물품 정보 가져오기
+              loadCurrentRoundItem()
               
               // Check for state changes and show notifications
               if (previousState) {
@@ -209,12 +266,12 @@ export default function DynamicGuestRoom() {
     // Initial check
     checkRoomAndPoll()
     
-    // Poll every 2 seconds
-    const interval = setInterval(checkRoomAndPoll, 2000)
+    // Poll every 2 seconds for stable updates
+    const interval = createInterval(checkRoomAndPoll, 2000)
 
     return () => {
       isPolling = false
-      clearInterval(interval)
+      // createInterval로 생성된 interval은 자동으로 정리됨
     }
   }, [roomId, guestData?.nickname])
 
@@ -240,10 +297,47 @@ export default function DynamicGuestRoom() {
         setCanBid(true) // 변동입찰에서는 기본적으로 입찰 가능
         setShowJoinModal(false)
         setIsJoining(false)
+        
+        // 즉시 상태 확인을 위해 추가 폴링 실행
+        setTimeout(async () => {
+          try {
+            const stateResponse = await auctionAPI.getState(roomId)
+            if (stateResponse.success) {
+              const currentGuest = stateResponse.state.guests.find(g => g.nickname === response.nickname)
+              if (currentGuest) {
+                setGuestData(prev => prev ? {
+                  ...prev,
+                  capital: currentGuest.capital,
+                  status: stateResponse.state.status,
+                  currentRound: stateResponse.state.currentRound,
+                  roundStatus: stateResponse.state.roundStatus,
+                  hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
+                } : null)
+                setCanBid(!currentGuest.hasBidInCurrentRound)
+              }
+            }
+          } catch (error) {
+            console.error("[DynamicGuest] Failed to update state after join:", error)
+          }
+        }, 500) // 0.5초 후 즉시 상태 확인
+        
+        // 호스트 페이지에 참가자 참여 알림을 위한 추가 요청
+        setTimeout(async () => {
+          try {
+            // 호스트 페이지가 참가자 참여를 감지할 수 있도록 추가 요청
+            await auctionAPI.getState(roomId)
+          } catch (error) {
+            console.error("[DynamicGuest] Failed to notify host of participation:", error)
+          }
+        }, 1000) // 1초 후 호스트 알림
+        
         toast({
           title: "참여 완료",
           description: `${response.nickname}님으로 변동입찰 경매에 참여했습니다.`,
         })
+        
+        // 현재 라운드 물품 정보 로드
+        loadCurrentRoundItem()
       } else {
         setError(response.error || "참여에 실패했습니다.")
         setIsJoining(false)
@@ -545,6 +639,53 @@ export default function DynamicGuestRoom() {
                     <p className="text-sm text-emerald-600">더 높은 입찰이 들어올 때까지 1위를 유지하세요.</p>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Current Round Item */}
+          {currentRoundItem && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  현재 라운드 경매 물품
+                </CardTitle>
+                <CardDescription>
+                  라운드 {guestData.currentRound}의 경매 물품입니다.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h3 className="font-semibold text-lg">{currentRoundItem.item.name}</h3>
+                      <p className="text-muted-foreground mt-2">{currentRoundItem.item.description}</p>
+                      {currentRoundItem.item.startingPrice && (
+                        <div className="mt-2">
+                          <span className="text-sm text-muted-foreground">시작가: </span>
+                          <span className="font-semibold text-primary">
+                            {currentRoundItem.item.startingPrice.toLocaleString()}원
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {currentRoundItem.item.image && (
+                      <div className="flex justify-center">
+                        <img 
+                          src={currentRoundItem.item.image} 
+                          alt={currentRoundItem.item.name}
+                          className="max-w-full h-48 object-contain rounded-lg border"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  {currentRoundItem.item.ownerNickname && (
+                    <div className="text-sm text-muted-foreground">
+                      등록자: {currentRoundItem.item.ownerNickname}
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           )}

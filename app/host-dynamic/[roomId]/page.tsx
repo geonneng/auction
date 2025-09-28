@@ -17,6 +17,10 @@ import { toast } from "@/hooks/use-toast"
 import QRCodeComponent from "@/components/qr-code"
 import { Sidebar } from "@/components/sidebar"
 import { AuctionItemProvider, useAuctionItem } from "@/contexts/auction-item-context"
+import { useConnectionMonitor } from "@/hooks/use-connection-monitor"
+import { useCleanup } from "@/hooks/use-cleanup"
+import { useOfflineHandler } from "@/hooks/use-offline-handler"
+import { DataValidator } from "@/lib/data-validation"
 
 function DynamicHostDashboardContent() {
   const params = useParams()
@@ -38,7 +42,42 @@ function DynamicHostDashboardContent() {
   const [isDistributingAmount, setIsDistributingAmount] = useState(false)
   
   // AuctionItemProvider에서 경매 물품 데이터 가져오기
-  const { auctionItems, getAllGuests, isLoading: isLoadingItems } = useAuctionItem()
+  const { auctionItems, getAllGuests, isLoading: isLoadingItems, loadAuctionItems } = useAuctionItem()
+  
+  // 연결 상태 모니터링
+  const { connectionState, recordRequest } = useConnectionMonitor({
+    onConnectionLost: () => {
+      toast({
+        title: "연결 끊김",
+        description: "서버와의 연결이 끊어졌습니다. 자동으로 재연결을 시도합니다.",
+        variant: "destructive",
+      })
+    },
+    onConnectionRestored: () => {
+      toast({
+        title: "연결 복구",
+        description: "서버와의 연결이 복구되었습니다.",
+      })
+    }
+  })
+
+  // 오프라인 처리
+  const { isOffline, queueAction } = useOfflineHandler({
+    onOffline: () => {
+      toast({
+        title: "오프라인 상태",
+        description: "인터넷 연결이 끊어졌습니다. 연결이 복구되면 자동으로 동기화됩니다.",
+        variant: "destructive",
+      })
+    }
+  })
+
+  // 정리 로직
+  const { createInterval, createTimeout, cleanup } = useCleanup({
+    onUnmount: () => {
+      console.log("[DynamicHost] Component unmounting, cleaning up resources")
+    }
+  })
 
   useEffect(() => {
     let isPolling = true
@@ -87,7 +126,9 @@ function DynamicHostDashboardContent() {
       
       // Continue polling if still active
       if (isPolling) {
-        setTimeout(loadRoomState, 2000) // Poll every 2 seconds
+        // 게스트 참여 감지를 위해 첫 1분은 1초 간격으로 폴링
+        const pollingInterval = retryCount < 30 ? 1000 : 2000
+        createTimeout(loadRoomState, pollingInterval)
       }
     }
 

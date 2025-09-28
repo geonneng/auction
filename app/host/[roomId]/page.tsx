@@ -144,7 +144,26 @@ function HostDashboardContent() {
             setPreviousStateHash(stateHash)
             
             // 경매 물품 목록도 주기적으로 새로고침 (캐시 우선)
-            loadAuctionItems(roomId, false)
+            // 물품 로딩은 별도로 처리하여 참가자 인식에 영향 주지 않도록 함
+            setTimeout(() => {
+              loadAuctionItems(roomId, false)
+            }, 100)
+          } else {
+            // 상태가 동일해도 참가자 수가 변화했을 수 있으므로 확인
+            if (previousGuestCount !== currentGuestCount) {
+              console.log(`[Host] Guest count changed: ${previousGuestCount} -> ${currentGuestCount}`)
+              setPreviousGuestCount(currentGuestCount)
+              
+              if (currentGuestCount > previousGuestCount) {
+                const newGuests = newState.guests.slice(previousGuestCount)
+                newGuests.forEach((guest: any) => {
+                  toast({
+                    title: "새 참가자 참여",
+                    description: `${guest.nickname}님이 경매에 참여했습니다.`,
+                  })
+                })
+              }
+            }
           }
           
           // 연결 상태 기록
@@ -173,8 +192,8 @@ function HostDashboardContent() {
       
       // Continue polling if still active
       if (isPolling) {
-        // 게스트 참여 감지를 위해 첫 30초는 1초 간격으로 폴링
-        const pollingInterval = retryCount < 15 ? 1000 : 2000
+        // 게스트 참여 감지를 위해 첫 1분은 1초 간격으로 폴링
+        const pollingInterval = retryCount < 30 ? 1000 : 2000
         createTimeout(loadRoomState, pollingInterval)
       }
     }
