@@ -10,7 +10,7 @@ import { AuctionItemProvider } from "@/contexts/auction-item-context"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "가담 - 실시간 경매 시뮬레이션",
+  title: "BID - 실시간 경매 시뮬레이션",
   description: "가치를 이야기하다. 모던하고 직관적인 교육용 실시간 경매 플랫폼",
   generator: "v0.app",
 }
@@ -28,7 +28,7 @@ export default function RootLayout({
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(139,126,102,0.08)_1px,transparent_0)] bg-[length:24px_24px] opacity-50"></div>
           
           <Header />
-          <div className="relative z-10 pt-16">
+          <div className="relative z-10 pt-14 sm:pt-16">
             <AuctionItemProvider>
               <Suspense fallback={
                 <div className="flex items-center justify-center h-64">
