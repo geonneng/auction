@@ -354,13 +354,13 @@ class AuctionRoom {
       name: this.name,
       status: this.status,
       initialCapital: this.initialCapital,
+      guestCount: this.guests.size,
       guests: Array.from(this.guests.values()).map((guest) => ({
         nickname: guest.nickname,
         capital: guest.capital,
         hasBidInCurrentRound: guest.hasBidInCurrentRound,
       })),
       bids: this.bids.slice(-20), // Last 20 bids
-      guestCount: this.guests.size,
       currentRound: this.currentRound,
       roundStatus: this.roundStatus,
       currentHighestBid: highestBid,
@@ -444,6 +444,8 @@ export async function POST(request: NextRequest) {
           joinRoom.addGuest('temp-socket-id', nickname)
           const guest = joinRoom.guests.get(nickname)
           
+          console.log(`[API] Guest ${nickname} joined room ${joinRoomId}. Total guests: ${joinRoom.guests.size}`)
+          
           return NextResponse.json({
             success: true,
             nickname,
@@ -452,8 +454,11 @@ export async function POST(request: NextRequest) {
             currentRound: joinRoom.currentRound,
             roundStatus: joinRoom.roundStatus,
             hasBidInCurrentRound: guest.hasBidInCurrentRound,
+            guestCount: joinRoom.guests.size,
+            totalGuests: Array.from(joinRoom.guests.values()).map(g => g.nickname)
           })
         } catch (error: any) {
+          console.error(`[API] Failed to add guest ${nickname} to room ${joinRoomId}:`, error)
           return NextResponse.json({ success: false, error: error.message })
         }
 

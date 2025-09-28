@@ -37,6 +37,7 @@ function HostDashboardContent() {
   const [isDistributingAmount, setIsDistributingAmount] = useState(false)
   const [isEndingAuction, setIsEndingAuction] = useState(false)
   const [finalResults, setFinalResults] = useState<any>(null)
+  const [previousGuestCount, setPreviousGuestCount] = useState(0)
   
   // AuctionItemProvider에서 경매 물품 데이터 가져오기
   const { auctionItems, getAllGuests, isLoading: isLoadingItems, loadAuctionItems } = useAuctionItem()
@@ -57,10 +58,25 @@ function HostDashboardContent() {
         console.log("[Host] Poll response:", response)
         
         if (response.success) {
-          setAuctionState(response.state)
-          setRecentBids(response.state.bids || [])
+          const newState = response.state
+          const currentGuestCount = newState.guestCount || 0
+          
+          // 참가자 수 변화 감지 및 알림
+          if (previousGuestCount > 0 && currentGuestCount > previousGuestCount) {
+            const newGuests = newState.guests.slice(previousGuestCount)
+            newGuests.forEach((guest: any) => {
+              toast({
+                title: "새 참가자 참여",
+                description: `${guest.nickname}님이 경매에 참여했습니다.`,
+              })
+            })
+          }
+          
+          setAuctionState(newState)
+          setRecentBids(newState.bids || [])
           setJoinUrl(`${window.location.origin}/room/${roomId}`)
           setIsConnected(true)
+          setPreviousGuestCount(currentGuestCount)
           consecutiveErrors = 0
           retryCount = 0
           
@@ -86,7 +102,7 @@ function HostDashboardContent() {
       
       // Continue polling if still active
       if (isPolling) {
-        setTimeout(loadRoomState, 2000) // Poll every 2 seconds
+        setTimeout(loadRoomState, 1000) // Poll every 1 second for faster updates
       }
     }
 

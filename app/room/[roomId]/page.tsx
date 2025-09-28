@@ -182,8 +182,8 @@ export default function GuestRoom() {
     // Initial check
     checkRoomAndPoll()
     
-    // Poll every 2 seconds
-    const interval = setInterval(checkRoomAndPoll, 2000)
+    // Poll every 1 second for faster updates
+    const interval = setInterval(checkRoomAndPoll, 1000)
 
     return () => {
       isPolling = false
@@ -214,6 +214,33 @@ export default function GuestRoom() {
         setCanBid(!response.hasBidInCurrentRound)
         setShowJoinModal(false)
         setIsJoining(false)
+        
+        // 즉시 상태 확인을 위해 추가 폴링 실행
+        setTimeout(() => {
+          const checkRoomAndPoll = async () => {
+            try {
+              const stateResponse = await auctionAPI.getState(roomId)
+              if (stateResponse.success) {
+                const currentGuest = stateResponse.state.guests.find(g => g.nickname === response.nickname)
+                if (currentGuest) {
+                  setGuestData(prev => prev ? {
+                    ...prev,
+                    capital: currentGuest.capital,
+                    status: stateResponse.state.status,
+                    currentRound: stateResponse.state.currentRound,
+                    roundStatus: stateResponse.state.roundStatus,
+                    hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
+                  } : null)
+                  setCanBid(!currentGuest.hasBidInCurrentRound)
+                }
+              }
+            } catch (error) {
+              console.error("[Guest] Failed to update state after join:", error)
+            }
+          }
+          checkRoomAndPoll()
+        }, 500) // 0.5초 후 즉시 상태 확인
+        
         toast({
           title: "참여 완료",
           description: `${response.nickname}님으로 경매에 참여했습니다.`,
