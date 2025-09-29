@@ -9,7 +9,7 @@ interface Params {
 
 export default function HostDynamicPage({ params }: { params: Promise<Params> }) {
   const { roomId } = use(params)
-
+  
   return (
     <HostDashboard 
       roomId={roomId} 

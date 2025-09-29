@@ -7,13 +7,13 @@ interface Params {
   roomId: string
 }
 
-export default function HostDynamicPage({ params }: { params: Promise<Params> }) {
+export default function HostPage({ params }: { params: Promise<Params> }) {
   const { roomId } = use(params)
-
+  
   return (
     <HostDashboard 
       roomId={roomId} 
-      auctionType="dynamic" 
+      auctionType="fixed" 
     />
   )
 }

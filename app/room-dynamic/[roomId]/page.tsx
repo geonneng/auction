@@ -191,8 +191,8 @@ export default function DynamicGuestRoom() {
                   setRoundResults(null) // Clear previous round results
                 }
                 
-                // Round ended
-                if (previousState.roundStatus === "ACTIVE" && response.state.roundStatus === "ENDED") {
+                // Round ended (ACTIVE -> NON-ACTIVE: WAITING/ENDED 모두 처리)
+                if (previousState.roundStatus === "ACTIVE" && response.state.roundStatus !== "ACTIVE") {
                   console.log("[Dynamic Guest] Round ended!")
                   // Get round results from the latest bids
                   const roundBids = response.state.bids.filter((bid: any) => bid.round === response.state.currentRound)
@@ -434,7 +434,7 @@ export default function DynamicGuestRoom() {
     
     try {
       console.log("[Dynamic Guest] Placing bid:", { roomId, nickname: guestData.nickname, amount })
-      const response = await auctionAPI.placeBid(roomId, guestData.nickname, amount, 'dynamic')
+      const response = await auctionAPI.placeBid(roomId, guestData.nickname, amount, guestData.currentRound || 1)
       console.log("[Dynamic Guest] Bid response:", response)
       
       if (response.success) {

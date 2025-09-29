@@ -17,6 +17,9 @@ import { useConnectionMonitor } from "@/hooks/use-connection-monitor"
 import { useCleanup } from "@/hooks/use-cleanup"
 import { useOfflineHandler } from "@/hooks/use-offline-handler"
 import { DataValidator } from "@/lib/data-validation"
+import { GuestJoin } from '@/components/auction/guest-join'
+import { GuestBid } from '@/components/auction/guest-bid'
+import { GuestStatus } from '@/components/auction/guest-status'
 import { GuestLayout } from "@/components/guest-layout"
 import { AuctionItemProvider } from "@/contexts/auction-item-context"
 import { useAuctionRealtime } from "@/hooks/use-supabase-realtime"
@@ -280,6 +283,14 @@ export default function GuestRoom() {
     } finally {
       setIsBidding(false)
     }
+  }
+
+  // 모듈형 UI 연결
+  const joinHandler = async (roomId: string, nickname: string) => {
+    const res = await auctionAPI.joinRoom(roomId, nickname)
+    if (!res.success) throw new Error(res.error || 'Join failed')
+    setGuestData({ ...(res.guest || { nickname, capital: 0 }), nickname })
+    setCanBid(true)
   }
 
   // 입찰 불가 상태 확인

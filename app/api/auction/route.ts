@@ -254,8 +254,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, room: updatedRoom, state: updatedRoom })
 
       case 'placeBid':
-        if (!roomId || !nickname || bidAmount === undefined || round === undefined) {
-          return NextResponse.json({ success: false, error: "Room ID, nickname, bid amount, and round are required" }, { status: 400 })
+        if (!roomId || !nickname || bidAmount === undefined) {
+          return NextResponse.json({ success: false, error: "Room ID, nickname and bid amount are required" }, { status: 400 })
         }
         
         // 게스트 정보 가져오기
@@ -274,27 +274,25 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ success: false, error: "Insufficient capital" }, { status: 400 })
         }
 
-        // 현재 아이템 가져오기
-        const { data: currentItem } = await supabaseAdmin
+        // 현재 방 상태 및 아이템 가져오기 (아이템은 없어도 허용)
+        const { data: roomRow } = await supabaseAdmin
           .from('auction_rooms')
-          .select('current_item')
+          .select('current_item, current_round')
           .eq('id', roomId)
           .single()
 
-        if (!currentItem?.current_item) {
-          return NextResponse.json({ success: false, error: "No active item" }, { status: 400 })
-        }
+        const effectiveRound = (roomRow?.current_round ?? round ?? 1)
 
-        // 입찰 추가
+        // 입찰 추가 (item_id는 null 허용)
         const { data: newBid, error: bidError } = await supabaseAdmin
           .from('bids')
           .insert({
             room_id: roomId,
             guest_id: guest.id,
-            item_id: currentItem.current_item?.id || null,
+            item_id: roomRow?.current_item?.id || null,
             nickname: nickname,
             amount: bidAmount,
-            round: round
+            round: effectiveRound
           })
           .select()
           .single()
@@ -350,7 +348,8 @@ export async function POST(request: NextRequest) {
         // 라운드 종료
         const { data: endRoom, error: endError } = await supabaseAdmin
           .from('auction_rooms')
-          .update({ round_status: 'ENDED' })
+          // 다음 라운드를 바로 시작할 수 있도록 WAITING 상태로 전환
+          .update({ round_status: 'WAITING' })
           .eq('id', roomId)
           .select()
           .single()
