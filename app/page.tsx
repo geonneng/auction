@@ -96,11 +96,15 @@ export default function HomePage() {
         })
         setIsCreating(false)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to create auction:", error)
+      
+      // 에러 메시지에 따라 다른 토스트 메시지 표시
+      const errorMessage = error.message || "서버에 연결할 수 없습니다."
+      
       toast({
         title: "연결 오류",
-        description: "서버에 연결할 수 없습니다.",
+        description: errorMessage,
         variant: "destructive",
       })
       setIsCreating(false)

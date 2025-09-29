@@ -13,23 +13,28 @@ export class AuctionAPI {
   constructor() {
     this.baseUrl = '/api/auction'
     this.retryOptions = {
-      maxRetries: 3,
-      baseDelay: 1000,
-      maxDelay: 10000,
+      maxRetries: 2,
+      baseDelay: 400,
+      maxDelay: 2000,
       backoffMultiplier: 2
     }
   }
 
   private async makeRequest(url: string, options: RequestInit, retries?: number): Promise<any> {
-    const maxRetries = retries ?? this.retryOptions.maxRetries!
+    const method = (options.method || 'GET').toUpperCase()
+    const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)
+    const maxRetries = isMutation ? 1 : (retries ?? this.retryOptions.maxRetries!)
     
     for (let i = 0; i < maxRetries; i++) {
       try {
         console.log(`[API] Making request to ${url}, attempt ${i + 1}/${maxRetries}`)
         
-        // AbortController로 타임아웃 설정
+        // AbortController로 타임아웃 설정 (10초)
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 10000) // 10초 타임아웃
+        const timeoutId = setTimeout(() => {
+          console.log(`[API] Request timeout after 10 seconds`)
+          controller.abort()
+        }, 10000) // 10초 타임아웃
         
         const response = await fetch(url, {
           ...options,
@@ -43,11 +48,23 @@ export class AuctionAPI {
         clearTimeout(timeoutId)
         
         if (!response.ok) {
+          // 응답 본문을 함께 로깅하여 원인 진단 용이
+          let errorBody: any = null
+          try {
+            errorBody = await response.json()
+          } catch (_) {}
+
+          console.error('[API] HTTP error response:', {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorBody
+          })
+
           // 4xx 클라이언트 오류는 재시도하지 않음
           if (response.status >= 400 && response.status < 500) {
-            throw new Error(`Client error: ${response.status} ${response.statusText}`)
+            throw new Error(`Client error: ${response.status} ${response.statusText}${errorBody?.error ? ` - ${errorBody.error}` : ''}`)
           }
-          throw new Error(`HTTP error! status: ${response.status}`)
+          throw new Error(`HTTP error! status: ${response.status}${errorBody?.error ? ` - ${errorBody.error}` : ''}`)
         }
         
         const data = await response.json()
@@ -56,8 +73,17 @@ export class AuctionAPI {
       } catch (error: any) {
         console.error(`[API] Request failed (attempt ${i + 1}/${maxRetries}):`, error)
         
+        // AbortError인 경우 더 구체적인 메시지 제공
+        if (error.name === 'AbortError') {
+          console.error(`[API] Request was aborted - possible timeout or network issue`)
+        }
+        
         // 마지막 시도이거나 재시도 불가능한 오류인 경우
         if (i === maxRetries - 1 || this.isNonRetryableError(error)) {
+          // AbortError인 경우 더 친화적인 에러 메시지 제공
+          if (error.name === 'AbortError') {
+            throw new Error('요청 시간이 초과되었습니다. 네트워크 연결을 확인해주세요.')
+          }
           throw error
         }
         
@@ -74,9 +100,16 @@ export class AuctionAPI {
   }
 
   private isNonRetryableError(error: any): boolean {
-    // 네트워크 오류나 타임아웃이 아닌 경우 재시도하지 않음
-    if (error.name === 'AbortError') return true
+    // 클라이언트 오류(4xx)는 재시도하지 않음
     if (error.message?.includes('Client error:')) return true
+    // 서버 오류(5xx)는 기본적으로 재시도하지 않도록 처리하여 지연을 줄임
+    const m = /HTTP error! status: (\d+)/.exec(error.message || '')
+    if (m) {
+      const status = parseInt(m[1], 10)
+      if (status >= 500) return true
+    }
+    // AbortError는 재시도하지 않음
+    if (error.name === 'AbortError') return true
     return false
   }
 
@@ -168,9 +201,12 @@ export class AuctionAPI {
   }
 
   async getState(roomId: string) {
-    return this.makeRequest(`${this.baseUrl}?roomId=${roomId}`, {
-      method: 'GET'
-    })
+    const ts = Date.now()
+    return this.makeRequest(`${this.baseUrl}?roomId=${roomId}&_t=${ts}`, {
+      method: 'GET',
+      // 최신 상태 강제
+      cache: 'no-store'
+    } as RequestInit)
   }
 
   async getAuctionItems(roomId: string) {

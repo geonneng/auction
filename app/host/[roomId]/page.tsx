@@ -102,7 +102,7 @@ function HostDashboardContent() {
         console.log("[Host] Last guest join time:", response.state?.lastGuestJoinTime)
         
         if (response.success) {
-          const newState = response.state
+          let newState: any = response.state ?? response.room ?? {}
           
           // 데이터 무결성 검증
           const validation = DataValidator.validateAuctionState(newState)
@@ -117,7 +117,7 @@ function HostDashboardContent() {
             console.warn("[Host] Auction state warnings:", validation.warnings)
           }
           
-          const currentGuestCount = newState.guestCount || 0
+          const currentGuestCount = newState.guestCount || (Array.isArray(newState.guests) ? newState.guests.length : 0) || 0
           const currentLastGuestJoinTime = newState.lastGuestJoinTime || 0
           
           // 상태 변화 감지를 위한 해시 생성
@@ -126,7 +126,7 @@ function HostDashboardContent() {
             status: newState.status,
             currentRound: newState.currentRound,
             roundStatus: newState.roundStatus,
-            guests: newState.guests.map(g => g.nickname).sort(), // 참가자 목록도 해시에 포함
+            guests: (newState.guests || []).map((g: any) => g.nickname).sort(), // 참가자 목록도 해시에 포함
             lastGuestJoinTime: currentLastGuestJoinTime // 참가자 참여 시간도 해시에 포함
           })
           
@@ -685,7 +685,7 @@ function HostDashboardContent() {
                           variant="outline" 
                           size="sm"
                           className="flex items-center gap-2"
-                          disabled={auctionState.guests.length === 0}
+                          disabled={!Array.isArray(auctionState?.guests) || auctionState.guests.length === 0}
                         >
                           <Edit3 className="h-4 w-4" />
                           자본금 일괄 수정
@@ -733,7 +733,7 @@ function HostDashboardContent() {
                   </div>
                 </CardHeader>
                 <CardContent className="h-full overflow-hidden">
-                  {auctionState.guests.length === 0 ? (
+                  {!Array.isArray(auctionState?.guests) || auctionState.guests.length === 0 ? (
                     <div className="text-center py-12 text-muted-foreground">
                       아직 참가자가 없습니다.
                       <br />
@@ -752,7 +752,7 @@ function HostDashboardContent() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {auctionState.guests.map((guest) => (
+                            {(auctionState.guests || []).map((guest) => (
                               <TableRow key={guest.nickname} className="h-12">
                                 <TableCell className="font-medium text-lg truncate w-[120px] min-w-[120px] max-w-[120px]">{guest.nickname}</TableCell>
                                 <TableCell className="text-center w-[100px] min-w-[100px] max-w-[100px]">
@@ -930,7 +930,7 @@ function HostDashboardContent() {
                 {auctionState.status === "PRE-START" ? (
                   <div className="space-y-4">
                     <div className="text-sm text-muted-foreground">
-                      초기 자본금: {auctionState.initialCapital.toLocaleString()}원
+                      초기 자본금: {Number(auctionState?.initialCapital ?? 0).toLocaleString()}원
                     </div>
                     <Button
                       onClick={handleStartAuction}

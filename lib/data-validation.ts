@@ -12,40 +12,66 @@ export class DataValidator {
     const errors: string[] = []
     const warnings: string[] = []
 
+    // API 응답 형태 보정: { room: {...} }도 허용
+    if (state && typeof state === 'object' && state.room) {
+      state = state.room
+    }
+
+    // 입력 안전성 체크
+    if (!state || typeof state !== 'object') {
+      return {
+        isValid: false,
+        errors: ['State is required'],
+        warnings
+      }
+    }
+
+    // 필드 정규화: snake_case / camelCase 모두 허용
+    const normalized = {
+      id: state.id ?? state.room_id ?? state.roomId,
+      status: state.status,
+      initialCapital: state.initialCapital ?? state.initial_capital,
+      currentRound: state.currentRound ?? state.current_round,
+      roundStatus: state.roundStatus ?? state.round_status,
+      guests: state.guests,
+      bids: state.bids
+    }
+
     // 필수 필드 검증
-    if (!state.id) errors.push('Room ID is required')
-    if (!state.status) errors.push('Status is required')
-    if (typeof state.initialCapital !== 'number' || state.initialCapital <= 0) {
+    if (!normalized.id) errors.push('Room ID is required')
+    if (!normalized.status) errors.push('Status is required')
+    if (typeof normalized.initialCapital !== 'number' || normalized.initialCapital <= 0) {
       errors.push('Initial capital must be a positive number')
     }
-    if (typeof state.currentRound !== 'number' || state.currentRound < 0) {
+    if (typeof normalized.currentRound !== 'number' || normalized.currentRound < 0) {
       errors.push('Current round must be a non-negative number')
     }
 
     // 상태 값 검증
     const validStatuses = ['PRE-START', 'ACTIVE', 'ENDED']
-    if (!validStatuses.includes(state.status)) {
-      errors.push(`Invalid status: ${state.status}`)
+    if (!validStatuses.includes(normalized.status)) {
+      errors.push(`Invalid status: ${normalized.status}`)
     }
 
     // 게스트 데이터 검증
-    if (state.guests && Array.isArray(state.guests)) {
-      state.guests.forEach((guest: any, index: number) => {
+    if (normalized.guests && Array.isArray(normalized.guests)) {
+      normalized.guests.forEach((guest: any, index: number) => {
         if (!guest.nickname || typeof guest.nickname !== 'string') {
           errors.push(`Guest ${index}: nickname is required`)
         }
         if (typeof guest.capital !== 'number' || guest.capital < 0) {
           errors.push(`Guest ${index}: capital must be a non-negative number`)
         }
-        if (typeof guest.hasBidInCurrentRound !== 'boolean') {
+        const hasBid = guest.hasBidInCurrentRound ?? guest.has_bid_in_current_round
+        if (typeof hasBid !== 'boolean') {
           errors.push(`Guest ${index}: hasBidInCurrentRound must be boolean`)
         }
       })
     }
 
     // 입찰 데이터 검증
-    if (state.bids && Array.isArray(state.bids)) {
-      state.bids.forEach((bid: any, index: number) => {
+    if (normalized.bids && Array.isArray(normalized.bids)) {
+      normalized.bids.forEach((bid: any, index: number) => {
         if (!bid.nickname || typeof bid.nickname !== 'string') {
           errors.push(`Bid ${index}: nickname is required`)
         }
@@ -59,11 +85,11 @@ export class DataValidator {
     }
 
     // 경고사항 체크
-    if (state.guests && state.guests.length === 0 && state.status === 'ACTIVE') {
+    if (normalized.guests && normalized.guests.length === 0 && normalized.status === 'ACTIVE') {
       warnings.push('Auction is active but no guests are present')
     }
 
-    if (state.currentRound > 0 && (!state.bids || state.bids.length === 0)) {
+    if (normalized.currentRound > 0 && (!normalized.bids || normalized.bids.length === 0)) {
       warnings.push('Current round is active but no bids are present')
     }
 
@@ -72,6 +98,11 @@ export class DataValidator {
       errors,
       warnings
     }
+  }
+
+  // 기존 코드에서 DataValidator.recoverAuctionState로 호출하는 경우를 위한 호환 메서드
+  static recoverAuctionState(state: any): any {
+    return DataRecovery.recoverAuctionState(state)
   }
 
   // 경매 물품 검증

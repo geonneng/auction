@@ -112,17 +112,19 @@ export default function GuestRoom() {
           
           // If guest is already joined, update their data
           if (guestData) {
-            const currentGuest = response.state.guests.find(g => g.nickname === guestData.nickname)
+            const state: any = response.state ?? response.room ?? {}
+            const guests: any[] = Array.isArray(state.guests) ? state.guests : []
+            const currentGuest = guests.find((g: any) => g.nickname === guestData.nickname)
             console.log("[Guest] Current guest found:", currentGuest)
             
             if (currentGuest) {
               // 상태 변화 감지를 위한 해시 생성
               const stateHash = JSON.stringify({
                 capital: currentGuest.capital,
-                status: response.state.status,
-                currentRound: response.state.currentRound,
-                roundStatus: response.state.roundStatus,
-                hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
+                status: state.status,
+                currentRound: state.currentRound ?? state.current_round ?? 0,
+                roundStatus: state.roundStatus ?? state.round_status,
+                hasBidInCurrentRound: currentGuest.hasBidInCurrentRound ?? currentGuest.has_bid_in_current_round
               })
               
             // 상태가 실제로 변화했을 때만 업데이트
@@ -130,26 +132,26 @@ export default function GuestRoom() {
               const newGuestData = {
                 ...guestData,
                 capital: currentGuest.capital,
-                status: response.state.status,
-                currentRound: response.state.currentRound,
-                roundStatus: response.state.roundStatus,
-                hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
+                status: state.status,
+                currentRound: state.currentRound ?? state.current_round ?? 0,
+                roundStatus: state.roundStatus ?? state.round_status,
+                hasBidInCurrentRound: currentGuest.hasBidInCurrentRound ?? currentGuest.has_bid_in_current_round
               }
               
               console.log("[Guest] Updating guest data:", newGuestData)
               setGuestData(newGuestData)
-              setCanBid(!currentGuest.hasBidInCurrentRound)
+              setCanBid(!(currentGuest.hasBidInCurrentRound ?? currentGuest.has_bid_in_current_round))
               setPreviousStateHash(stateHash)
               
               // 현재 라운드의 경매 물품 정보 가져오기
               loadCurrentRoundItem()
               
               console.log("[Guest] State updated:", {
-                status: response.state.status,
-                roundStatus: response.state.roundStatus,
-                currentRound: response.state.currentRound,
-                canBid: !currentGuest.hasBidInCurrentRound,
-                hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
+                status: state.status,
+                roundStatus: state.roundStatus ?? state.round_status,
+                currentRound: state.currentRound ?? state.current_round ?? 0,
+                canBid: !(currentGuest.hasBidInCurrentRound ?? currentGuest.has_bid_in_current_round),
+                hasBidInCurrentRound: currentGuest.hasBidInCurrentRound ?? currentGuest.has_bid_in_current_round
               })
             }
               
@@ -287,9 +289,18 @@ export default function GuestRoom() {
       const response = await auctionAPI.joinRoom(roomId, nickname.trim())
       if (response.success) {
         console.log("[v0] Guest joined successfully:", response)
-        console.log(`[v0] hasBidInCurrentRound: ${response.hasBidInCurrentRound}, canBid will be: ${!response.hasBidInCurrentRound}`)
-        setGuestData(response)
-        setCanBid(!response.hasBidInCurrentRound)
+        const apiGuest: any = response.guest ?? response
+        const normalizedGuest = {
+          nickname: apiGuest.nickname,
+          capital: Number(apiGuest.capital ?? 0),
+          status: apiGuest.status,
+          currentRound: apiGuest.currentRound ?? apiGuest.current_round ?? 0,
+          roundStatus: apiGuest.roundStatus ?? apiGuest.round_status,
+          hasBidInCurrentRound: apiGuest.hasBidInCurrentRound ?? apiGuest.has_bid_in_current_round ?? false
+        }
+        console.log(`[v0] hasBidInCurrentRound: ${normalizedGuest.hasBidInCurrentRound}, canBid will be: ${!normalizedGuest.hasBidInCurrentRound}`)
+        setGuestData(normalizedGuest as any)
+        setCanBid(!normalizedGuest.hasBidInCurrentRound)
         setShowJoinModal(false)
         setIsJoining(false)
         
@@ -298,14 +309,21 @@ export default function GuestRoom() {
           try {
             const stateResponse = await auctionAPI.getState(roomId)
             if (stateResponse.success) {
-              const currentGuest = stateResponse.state.guests.find(g => g.nickname === response.nickname)
-              if (currentGuest) {
+              const state: any = stateResponse.state ?? stateResponse.room ?? {}
+              const guests: any[] = Array.isArray(state.guests) ? state.guests : []
+              const currentGuestRaw = guests.find((g: any) => g.nickname === normalizedGuest.nickname)
+              if (currentGuestRaw) {
+                const currentGuest = {
+                  nickname: currentGuestRaw.nickname,
+                  capital: Number(currentGuestRaw.capital ?? 0),
+                  hasBidInCurrentRound: currentGuestRaw.hasBidInCurrentRound ?? currentGuestRaw.has_bid_in_current_round ?? false
+                }
                 setGuestData(prev => prev ? {
                   ...prev,
                   capital: currentGuest.capital,
-                  status: stateResponse.state.status,
-                  currentRound: stateResponse.state.currentRound,
-                  roundStatus: stateResponse.state.roundStatus,
+                  status: state.status ?? state.status,
+                  currentRound: state.currentRound ?? state.current_round ?? 0,
+                  roundStatus: state.roundStatus ?? state.round_status,
                   hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
                 } : null)
                 setCanBid(!currentGuest.hasBidInCurrentRound)
@@ -553,7 +571,7 @@ export default function GuestRoom() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary">
-                    {guestData.capital.toLocaleString()}원
+                    {Number(guestData?.capital ?? 0).toLocaleString()}원
                   </div>
                   <div className="text-sm text-muted-foreground">보유 자본</div>
                 </div>
