@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    const { action, roomId, nickname, initialCapital, auctionName, item, bidAmount, round, newCapital } = await request.json()
+    const { action, roomId, nickname, initialCapital, auctionName, item, itemData, guestName, bidAmount, round, newCapital } = await request.json()
     const supabaseAdmin = getSupabaseAdmin()
 
     switch (action) {
@@ -188,7 +188,8 @@ export async function POST(request: NextRequest) {
             name: item.name,
             description: item.description,
             image_url: item.image_url,
-            starting_price: item.starting_price
+            starting_price: item.starting_price,
+            created_by: guestName || nickname || 'unknown'
           })
           .select()
           .single()
@@ -348,8 +349,8 @@ export async function POST(request: NextRequest) {
         // 라운드 종료
         const { data: endRoom, error: endError } = await supabaseAdmin
           .from('auction_rooms')
-          // 다음 라운드를 바로 시작할 수 있도록 WAITING 상태로 전환
-          .update({ round_status: 'WAITING' })
+          // 다음 라운드를 바로 시작할 수 있도록 WAITING 상태로 전환하고 현재 아이템 초기화
+          .update({ round_status: 'WAITING', current_item: null })
           .eq('id', roomId)
           .select()
           .single()
@@ -432,7 +433,7 @@ export async function POST(request: NextRequest) {
         }
 
       case 'saveAuctionItem':
-        if (!roomId || !item) {
+        if (!roomId || !(item || itemData)) {
           return NextResponse.json({ success: false, error: 'Room ID and item are required' }, { status: 400 })
         }
 
@@ -441,11 +442,11 @@ export async function POST(request: NextRequest) {
             .from('auction_items')
             .insert({
               room_id: roomId,
-              name: item.name,
-              description: item.description,
-              image_url: item.image_url,
-              starting_price: item.starting_price,
-              created_by: nickname || 'unknown'
+              name: (item?.name ?? itemData?.name) as string,
+              description: (item?.description ?? itemData?.description) as string,
+              image_url: (item?.image_url ?? itemData?.image_url) as string,
+              starting_price: (item?.starting_price ?? itemData?.starting_price ?? 0) as number,
+              created_by: (guestName || nickname || 'unknown') as string
             })
             .select()
             .single()
@@ -458,7 +459,10 @@ export async function POST(request: NextRequest) {
         }
 
       case 'registerAuctionItem':
-        if (!roomId || !item || typeof round !== 'number') {
+        console.log('[API] registerAuctionItem called with:', { roomId, itemData, round })
+        console.log('[API] itemData details:', JSON.stringify(itemData, null, 2))
+        if (!roomId || !itemData || typeof round !== 'number') {
+          console.log('[API] Missing required parameters:', { roomId: !!roomId, itemData: !!itemData, round, roundType: typeof round })
           return NextResponse.json({ success: false, error: 'Room ID, item and round are required' }, { status: 400 })
         }
 
@@ -466,7 +470,7 @@ export async function POST(request: NextRequest) {
           const { data: roomRow, error: regErr } = await supabaseAdmin
             .from('auction_rooms')
             .update({
-              current_item: { item, round },
+              current_item: { item: itemData, round },
               round_status: 'WAITING'
             })
             .eq('id', roomId)

@@ -12,12 +12,14 @@ import {
   useBids
 } from '@/stores/auction-store'
 import { useAuctionRealtime } from '@/hooks/use-auction-realtime-new'
+import { Package } from 'lucide-react'
 import { ParticipantPanel } from './participant-panel'
 import { AuctionControls } from './auction-controls'
 import { ItemManager } from './item-manager'
 import { RoundStatus } from './round-status'
 import { ConnectionStatus } from './connection-status'
 import { FinalResultsDialog } from './final-results-dialog'
+import { AuctionItemProvider } from '@/contexts/auction-item-context'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { toast } from '@/hooks/use-toast'
@@ -139,6 +141,7 @@ export function HostDashboard({ roomId, auctionType }: HostDashboardProps) {
   }
   
   return (
+    <AuctionItemProvider roomId={roomId}>
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <Sidebar roomId={roomId} />
       <div className="ml-16">
@@ -201,6 +204,27 @@ export function HostDashboard({ roomId, auctionType }: HostDashboardProps) {
               </CardContent>
             </Card>
 
+            {/* 현재 라운드 아이템 - ACTIVE 상태일 때만 표시 */}
+            {currentRoundItem && room?.round_status === 'ACTIVE' && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="h-5 w-5" />
+                    현재 라운드 경매 물품
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <p className="font-medium">{currentRoundItem.item.name}</p>
+                    <p className="text-sm text-gray-600">{currentRoundItem.item.description}</p>
+                    <p className="text-xs text-gray-500">
+                      등록 시간: {currentRoundItem.registeredAt.toLocaleString()}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <ParticipantPanel auctionType={auctionType} />
           </div>
         </div>
@@ -216,5 +240,6 @@ export function HostDashboard({ roomId, auctionType }: HostDashboardProps) {
         allBids={allBids}
       />
     </div>
+    </AuctionItemProvider>
   )
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import React, { useEffect, useState, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,6 +23,7 @@ import { GuestStatus } from '@/components/auction/guest-status'
 import { GuestLayout } from "@/components/guest-layout"
 import { AuctionItemProvider } from "@/contexts/auction-item-context"
 import { useAuctionRealtime } from "@/hooks/use-supabase-realtime"
+import { useCurrentRoundItem, useAuctionActions } from "@/stores/auction-store"
 
 export default function GuestRoom() {
   const params = useParams()
@@ -41,6 +42,62 @@ export default function GuestRoom() {
   const [canBid, setCanBid] = useState(true)
   const [previousStateHash, setPreviousStateHash] = useState("")
   const [currentRoundItem, setCurrentRoundItem] = useState<any>(null)
+  const storeCurrentRoundItem = useCurrentRoundItem()
+  const actions = useAuctionActions()
+  const [isItemDialogOpen, setIsItemDialogOpen] = useState(false)
+  
+  // 서버에서 현재 라운드 아이템 정보 가져오기
+  const loadCurrentRoundItem = useCallback(async () => {
+    try {
+      console.log('[Guest] Loading current round item for room:', roomId)
+      const response = await auctionAPI.getCurrentRoundItem(roomId)
+      console.log('[Guest] API response:', response)
+      
+      if (response.success && response.currentRoundItem) {
+        console.log('[Guest] Current round item loaded:', response.currentRoundItem)
+        setCurrentRoundItem(response.currentRoundItem)
+      } else {
+        console.log('[Guest] No current round item found')
+        setCurrentRoundItem(null)
+      }
+    } catch (error) {
+      console.error('[Guest] Failed to load current round item:', error)
+      setCurrentRoundItem(null)
+    }
+  }, [roomId])
+
+  // 스토어의 currentRoundItem과 동기화
+  React.useEffect(() => {
+    console.log('[Guest] Store currentRoundItem changed:', storeCurrentRoundItem)
+    if (storeCurrentRoundItem) {
+      setCurrentRoundItem(storeCurrentRoundItem)
+    }
+  }, [storeCurrentRoundItem])
+
+  // 현재 라운드 아이템 상태 디버깅
+  React.useEffect(() => {
+    console.log('[Guest] Current round item state changed:', currentRoundItem)
+  }, [currentRoundItem])
+
+  // 게스트 참가 후 현재 라운드 아이템 로드
+  React.useEffect(() => {
+    if (guestData && isConnected) {
+      console.log('[Guest] Loading current round item after join')
+      loadCurrentRoundItem()
+    }
+  }, [guestData, isConnected, loadCurrentRoundItem])
+
+  // 주기적으로 현재 라운드 아이템 확인 (5초마다)
+  React.useEffect(() => {
+    if (!guestData || !isConnected) return
+
+    const interval = setInterval(() => {
+      console.log('[Guest] Periodic check for current round item')
+      loadCurrentRoundItem()
+    }, 5000)
+
+    return () => clearInterval(interval)
+  }, [guestData, isConnected, loadCurrentRoundItem])
   
   // 연결 상태 모니터링
   const { connectionState, recordRequest } = useConnectionMonitor({
@@ -87,6 +144,13 @@ export default function GuestRoom() {
     onItemAdded: (item) => {
       console.log("[Guest] Item added via Realtime:", item)
       loadCurrentRoundItem()
+    },
+    onRoomUpdate: (room) => {
+      console.log("[Guest] Room updated via Realtime:", room)
+      // 방 정보가 업데이트되면 현재 라운드 아이템도 다시 로드
+      if (room.current_item) {
+        loadCurrentRoundItem()
+      }
     }
   })
 
@@ -165,18 +229,6 @@ export default function GuestRoom() {
     }
   })
 
-  // 현재 라운드의 경매 물품 정보 가져오기
-  const loadCurrentRoundItem = async () => {
-    try {
-      const response = await auctionAPI.getCurrentRoundItem(roomId)
-      if (response.success) {
-        setCurrentRoundItem(response.currentRoundItem)
-        console.log("[Guest] Current round item loaded:", response.currentRoundItem)
-      }
-    } catch (error) {
-      console.error("[Guest] Failed to load current round item:", error)
-    }
-  }
 
   // 초기 방 상태 확인 및 백업 폴링
   useEffect(() => {
@@ -301,7 +353,7 @@ export default function GuestRoom() {
 
   if (!guestData) {
     return (
-      <GuestLayout>
+      <GuestLayout roomId={roomId}>
         <div className="container mx-auto px-4 py-8">
           <Dialog open={showJoinModal} onOpenChange={() => {}}>
             <DialogContent className="sm:max-w-md">
@@ -346,8 +398,8 @@ export default function GuestRoom() {
   }
 
   return (
-    <AuctionItemProvider roomId={roomId}>
-      <GuestLayout>
+    <AuctionItemProvider roomId={roomId} guestName={guestData.nickname}>
+      <GuestLayout roomId={roomId} guestName={guestData.nickname}>
         <div className="container mx-auto px-4 py-8 space-y-6">
           {/* 연결 상태 */}
           <div className="flex items-center justify-between">
@@ -393,6 +445,78 @@ export default function GuestRoom() {
               </div>
             </CardContent>
           </Card>
+
+          {/* 현재 경매 물품 */}
+          {(() => {
+            console.log('[Guest] Rendering current item section:', {
+              guestStatus: guestData.status,
+              currentRoundItem: currentRoundItem,
+              shouldShow: true
+            })
+            return true
+          })() && (
+            <Card onClick={() => currentRoundItem && setIsItemDialogOpen(true)} className="cursor-pointer hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  현재 경매 물품
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {currentRoundItem ? (
+                  <div className="space-y-6">
+                    <div className="flex gap-6">
+                      {/* 물품 이미지 - 더 크게 */}
+                      {currentRoundItem.item.image && (
+                        <div className="flex-shrink-0">
+                          <img 
+                            src={currentRoundItem.item.image} 
+                            alt={currentRoundItem.item.name}
+                            className="w-40 h-40 object-cover rounded-xl border-2 shadow-lg"
+                          />
+                        </div>
+                      )}
+                      
+                      {/* 물품 정보 - 더 크게 */}
+                      <div className="flex-1 space-y-4">
+                        <h3 className="text-2xl font-bold text-gray-900">{currentRoundItem.item.name}</h3>
+                        <p className="text-lg text-gray-700 leading-relaxed">{currentRoundItem.item.description}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Package className="h-16 w-16 text-gray-400 mx-auto mb-6" />
+                    <p className="text-lg text-gray-500 mb-2">현재 경매 물품이 등록되지 않았습니다.</p>
+                    <p className="text-sm text-gray-400">호스트가 물품을 등록하면 여기에 표시됩니다.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* 현재 경매 물품 확대 보기 다이얼로그 */}
+          <Dialog open={isItemDialogOpen} onOpenChange={setIsItemDialogOpen}>
+            <DialogContent className="max-w-3xl w-[95vw]">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-bold">{currentRoundItem?.item?.name || '현재 경매 물품'}</DialogTitle>
+              </DialogHeader>
+              {currentRoundItem && (
+                <div className="space-y-4">
+                  {currentRoundItem.item.image && (
+                    <img
+                      src={currentRoundItem.item.image}
+                      alt={currentRoundItem.item.name}
+                      className="w-full max-h-[60vh] object-contain rounded-xl border"
+                    />
+                  )}
+                  <p className="text-lg text-gray-800 leading-relaxed whitespace-pre-wrap">
+                    {currentRoundItem.item.description}
+                  </p>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
 
           {/* 입찰 섹션 */}
           {guestData.status === "ACTIVE" && (

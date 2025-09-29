@@ -23,7 +23,6 @@ import {
 import { useRouter } from "next/navigation"
 import { auctionAPI } from "@/lib/api"
 import { toast } from "@/hooks/use-toast"
-import { Sidebar } from "@/components/sidebar"
 import { TraditionalPattern } from "@/components/ui/traditional-pattern"
 import { TraditionalElements } from "@/components/ui/traditional-elements"
 import { TraditionalGlow } from "@/components/ui/traditional-glow"
@@ -119,8 +118,6 @@ export default function HomePage() {
 
   return (
     <div>
-      <Sidebar />
-      <div className="ml-16">
         {/* Modern Hero Section */}
         <div className="relative h-[60vh] sm:h-[65vh] md:h-[70vh] min-h-[500px] sm:min-h-[600px] w-full bg-gradient-to-br from-emerald-50/80 via-amber-50/60 to-emerald-100/40 overflow-hidden">
           {/* Traditional Background Elements */}
@@ -635,7 +632,6 @@ export default function HomePage() {
         </CardContent>
       </Card>
         </div>
-      </div>
     </div>
   )
 }

@@ -1,6 +1,10 @@
 'use client'
 
-import { useRoom, useGuests, useCurrentRoundBids, useCurrentRoundItem, useBids } from '@/stores/auction-store'
+import React from 'react'
+import { useRoom, useGuests, useCurrentRoundBids, useCurrentRoundItem, useBids, useSetCurrentRoundItem } from '@/stores/auction-store'
+import { useAuctionItem } from '@/contexts/auction-item-context'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -16,8 +20,68 @@ export function RoundStatus({ auctionType = 'fixed' }: RoundStatusProps) {
   const currentRoundItem = useCurrentRoundItem()
   const guests = useGuests()
   const allBids = useBids()
+  const { loadAuctionItems, getAllGuests, getGuestItem } = useAuctionItem()
+  const setCurrentRoundItem = useSetCurrentRoundItem()
+  const [selectedItemKey, setSelectedItemKey] = React.useState<string | null>(null)
+  const [isRegistering, setIsRegistering] = React.useState(false)
   
   if (!room) return null
+  // WAITING 상태에서 방의 아이템 목록 로드 (게스트 등록물 동기화)
+  React.useEffect(() => {
+    if (room?.round_status === 'WAITING') {
+      console.log('[RoundStatus] Loading auction items for room:', room.id)
+      loadAuctionItems(room.id)
+    }
+  }, [room?.round_status, room?.id, loadAuctionItems])
+
+  // 라운드 종료 시 현재 라운드 아이템 초기화
+  React.useEffect(() => {
+    if (room?.round_status === 'WAITING') {
+      console.log('[RoundStatus] Round ended, clearing current round item')
+      setCurrentRoundItem(null)
+    }
+  }, [room?.round_status, setCurrentRoundItem])
+
+  const availableItems = React.useMemo(() => {
+    const guests = getAllGuests()
+    console.log('[RoundStatus] Available guests:', guests)
+    const items = guests
+      .map((guest) => {
+        const item = getGuestItem(guest)
+        console.log(`[RoundStatus] Guest ${guest} item:`, item)
+        return { guest, item }
+      })
+      .filter(({ item }) => !!item)
+    console.log('[RoundStatus] Available items:', items)
+    return items
+  }, [getAllGuests, getGuestItem])
+
+  const handleRegisterItem = async () => {
+    if (!room || !selectedItemKey) return
+    const { auctionAPI } = await import('@/lib/api')
+    const found = availableItems.find(({ guest }) => guest === selectedItemKey)
+    if (!found?.item) return
+    setIsRegistering(true)
+    try {
+      const roundNumber = room.current_round || 1
+      console.log('[RoundStatus] Registering item:', found.item, 'for round:', roundNumber)
+      console.log('[RoundStatus] Room ID:', room.id, 'Item:', found.item, 'Round:', roundNumber)
+      const result = await auctionAPI.registerAuctionItem(room.id, found.item, roundNumber)
+      console.log('[RoundStatus] Item registered successfully:', result)
+      
+      // 스토어에 현재 라운드 아이템 업데이트
+      setCurrentRoundItem({
+        item: found.item,
+        registeredAt: new Date()
+      })
+      
+      // 등록 후 즉시 현재 아이템 새로고침 트리거: 서버 상태가 갱신되면 Realtime/폴링으로 반영됨
+    } catch (error) {
+      console.error('[RoundStatus] Failed to register item:', error)
+    } finally {
+      setIsRegistering(false)
+    }
+  }
   
   // 현재 라운드 최고 입찰가 계산
   const highestBid = currentRoundBids.reduce((max, bid) => 
@@ -253,6 +317,44 @@ export function RoundStatus({ auctionType = 'fixed' }: RoundStatusProps) {
             {statusInfo.description}
           </p>
         </div>
+
+        {/* 라운드 대기: 호스트가 물품 지정 */}
+        {room.round_status === 'WAITING' && (
+          <div className="mt-4 p-4 rounded border bg-blue-50 border-blue-200">
+            <h4 className="font-medium mb-2 text-blue-900">새 라운드 물품 등록</h4>
+            <p className="text-sm text-blue-700 mb-3">이전 라운드가 종료되었습니다. 새 라운드를 위한 물품을 선택해주세요.</p>
+            {availableItems.length === 0 ? (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
+                <p className="text-sm text-yellow-800">
+                  등록된 물품이 없습니다. 게스트 페이지에서 물품을 등록해 주세요.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Select onValueChange={(v) => setSelectedItemKey(v)}>
+                    <SelectTrigger className="w-64">
+                      <SelectValue placeholder="게스트의 등록 물품 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableItems.map(({ guest, item }) => (
+                        <SelectItem key={guest} value={guest}>{guest} - {item!.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button onClick={handleRegisterItem} disabled={!selectedItemKey || isRegistering}>
+                    {isRegistering ? '등록 중...' : '이 물품으로 라운드 설정'}
+                  </Button>
+                </div>
+                {selectedItemKey && (
+                  <div className="p-2 bg-green-50 border border-green-200 rounded text-sm text-green-800">
+                    선택된 물품: {availableItems.find(({ guest }) => guest === selectedItemKey)?.item?.name}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   )

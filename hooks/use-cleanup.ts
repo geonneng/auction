@@ -78,8 +78,33 @@ export function useCleanup(options: CleanupOptions = {}) {
 
   // 컴포넌트 언마운트 시 정리
   useEffect(() => {
-    return cleanup
-  }, [cleanup])
+    return () => {
+      // 모든 interval 정리
+      if (intervalCleanup) {
+        intervalsRef.current.forEach(interval => {
+          clearInterval(interval)
+        })
+        intervalsRef.current.clear()
+      }
+
+      // 모든 timeout 정리
+      timeoutsRef.current.forEach(timeout => {
+        clearTimeout(timeout)
+      })
+      timeoutsRef.current.clear()
+
+      // 모든 이벤트 리스너 정리
+      if (eventCleanup) {
+        eventListenersRef.current.forEach(({ element, event, handler }) => {
+          element.removeEventListener(event, handler)
+        })
+        eventListenersRef.current = []
+      }
+
+      // 사용자 정의 정리 함수 실행
+      onUnmount?.()
+    }
+  }, [intervalCleanup, eventCleanup, onUnmount])
 
   // 페이지 숨김 시 정리
   useEffect(() => {

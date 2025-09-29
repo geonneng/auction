@@ -313,6 +313,14 @@ export const createAuctionActions = (
             : prev.room,
           lastUpdated: new Date(),
         }), false, 'startRound:optimisticUpdate')
+
+        // 현재 등록된 아이템이 있다면 currentRoundItem으로 설정
+        if (state.room.current_item && state.room.current_item.item) {
+          actions.setCurrentRoundItem({
+            item: state.room.current_item.item,
+            registeredAt: new Date()
+          })
+        }
       } catch (error) {
         actions.setError(error instanceof Error ? error.message : 'Unknown error')
         throw error

@@ -82,6 +82,9 @@ export const useError = () => useAuctionStore(state => state.error)
 export const useIsConnected = () => useAuctionStore(state => state.isConnected)
 export const useLastUpdated = () => useAuctionStore(state => state.lastUpdated)
 
+// Current Round Item 액션
+export const useSetCurrentRoundItem = () => stableActions.setCurrentRoundItem
+
 // 안정적인 복합 훅들 (shallow 비교 사용)
 export const useLoadingState = () => useAuctionStore(
   state => ({ 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import React, { useEffect, useState, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,6 +19,7 @@ import { useOfflineHandler } from "@/hooks/use-offline-handler"
 import { DataValidator } from "@/lib/data-validation"
 import { GuestLayout } from "@/components/guest-layout"
 import { AuctionItemProvider } from "@/contexts/auction-item-context"
+import { useCurrentRoundItem } from "@/stores/auction-store"
 
 export default function DynamicGuestRoom() {
   const params = useParams()
@@ -37,6 +38,8 @@ export default function DynamicGuestRoom() {
   const [canBid, setCanBid] = useState(true)
   const [previousStateHash, setPreviousStateHash] = useState("")
   const [currentRoundItem, setCurrentRoundItem] = useState<any>(null)
+  const storeCurrentRoundItem = useCurrentRoundItem()
+  const [isItemDialogOpen, setIsItemDialogOpen] = useState(false)
   
   // 연결 상태 모니터링
   const { connectionState, recordRequest } = useConnectionMonitor({
@@ -74,7 +77,7 @@ export default function DynamicGuestRoom() {
   })
 
   // 현재 라운드의 경매 물품 정보 가져오기
-  const loadCurrentRoundItem = async () => {
+  const loadCurrentRoundItem = useCallback(async () => {
     try {
       const response = await auctionAPI.getCurrentRoundItem(roomId)
       if (response.success) {
@@ -84,7 +87,11 @@ export default function DynamicGuestRoom() {
     } catch (error) {
       console.error("[DynamicGuest] Failed to load current round item:", error)
     }
-  }
+  }, [roomId])
+
+  useEffect(() => {
+    if (storeCurrentRoundItem) setCurrentRoundItem(storeCurrentRoundItem)
+  }, [storeCurrentRoundItem])
   const [currentHighestBid, setCurrentHighestBid] = useState<any>(null)
 
   // Check if room exists on mount and poll for updates
@@ -666,9 +673,9 @@ export default function DynamicGuestRoom() {
             </Card>
           )}
 
-          {/* Current Round Item */}
+          {/* Current Round Item (click to enlarge) */}
           {currentRoundItem && (
-            <Card>
+            <Card onClick={() => setIsItemDialogOpen(true)} className="cursor-pointer hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Package className="h-5 w-5" />
@@ -682,8 +689,8 @@ export default function DynamicGuestRoom() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <h3 className="font-semibold text-lg">{currentRoundItem.item.name}</h3>
-                      <p className="text-muted-foreground mt-2">{currentRoundItem.item.description}</p>
+                      <h3 className="font-semibold text-2xl text-gray-900">{currentRoundItem.item.name}</h3>
+                      <p className="text-lg text-gray-700 mt-3 leading-relaxed">{currentRoundItem.item.description}</p>
                       {currentRoundItem.item.startingPrice && (
                         <div className="mt-2">
                           <span className="text-sm text-muted-foreground">시작가: </span>
@@ -698,7 +705,7 @@ export default function DynamicGuestRoom() {
                         <img 
                           src={currentRoundItem.item.image} 
                           alt={currentRoundItem.item.name}
-                          className="max-w-full h-48 object-contain rounded-lg border"
+                          className="max-w-full h-64 object-contain rounded-xl border-2 shadow"
                         />
                       </div>
                     )}
@@ -712,6 +719,29 @@ export default function DynamicGuestRoom() {
               </CardContent>
             </Card>
           )}
+
+          {/* 확대 다이얼로그 */}
+          <Dialog open={isItemDialogOpen} onOpenChange={setIsItemDialogOpen}>
+            <DialogContent className="max-w-3xl w-[95vw]">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-bold">{currentRoundItem?.item?.name || '현재 경매 물품'}</DialogTitle>
+              </DialogHeader>
+              {currentRoundItem && (
+                <div className="space-y-4">
+                  {currentRoundItem.item.image && (
+                    <img
+                      src={currentRoundItem.item.image}
+                      alt={currentRoundItem.item.name}
+                      className="w-full max-h-[60vh] object-contain rounded-xl border"
+                    />
+                  )}
+                  <p className="text-lg text-gray-800 leading-relaxed whitespace-pre-wrap">
+                    {currentRoundItem.item.description}
+                  </p>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
 
           {/* Bidding Section */}
           {guestData.status === "ACTIVE" && guestData.roundStatus === "ACTIVE" ? (

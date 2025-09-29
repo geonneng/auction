@@ -40,7 +40,7 @@ interface GuestSidebarProps {
 
 export function GuestSidebar({ roomId, guestName }: GuestSidebarProps) {
   const { getGuestItem, saveAuctionItem, isLoading } = useAuctionItem()
-  const auctionItem = guestName ? getGuestItem(guestName) : null
+  const auctionItem = getGuestItem()
   
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false)
   const [itemName, setItemName] = useState("")
@@ -94,7 +94,7 @@ export function GuestSidebar({ roomId, guestName }: GuestSidebarProps) {
         description: itemDescription.trim(),
         image: imagePreview || undefined,
         roomId: roomId
-      }, guestName)
+      })
       
       handleClearForm()
       setIsItemDialogOpen(false)
