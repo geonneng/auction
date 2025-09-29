@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// 간단한 메모리 기반 저장소 - 데이터베이스 불필요
+// 메모리 기반 저장소 - 간단하고 안정적
 const auctionRooms = new Map()
 
 // Generate room ID helper
@@ -10,7 +10,6 @@ function generateRoomId() {
 
 export async function GET(request: NextRequest) {
   try {
-    console.log("[API] GET request received")
     const { searchParams } = new URL(request.url)
     const roomId = searchParams.get('roomId')
 
@@ -20,80 +19,174 @@ export async function GET(request: NextRequest) {
 
     const room = auctionRooms.get(roomId)
     if (!room) {
-      console.log("[API] Room not found:", roomId)
       return NextResponse.json({ success: false, error: "Room not found" }, { status: 404 })
     }
 
     return NextResponse.json({ success: true, room })
   } catch (error) {
-    console.error("[API] Error in GET handler:", error)
+    console.error("GET Error:", error)
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { action, ...data } = await request.json()
-    
+    const { action, roomId, nickname, initialCapital, auctionName, item, bidAmount, round } = await request.json()
+
     switch (action) {
       case 'createRoom':
-        const { initialCapital, auctionName } = data
-        const roomId = generateRoomId()
-        
-        const roomData = {
-          id: roomId,
-          name: auctionName || `경매 ${roomId}`,
+        const newRoomId = generateRoomId()
+        const newRoom = {
+          id: newRoomId,
+          name: auctionName || `경매방 ${newRoomId}`,
           initialCapital,
-          status: 'PRE-START',
           guests: [],
-          createdAt: new Date().toISOString()
+          bids: [],
+          items: [],
+          currentRound: 0,
+          status: 'PRE-START',
+          roundStatus: 'WAITING',
+          createdAt: new Date()
         }
-        
-        auctionRooms.set(roomId, roomData)
-        console.log("[API] Created room:", roomId, "with capital:", initialCapital)
-        
-        return NextResponse.json({
-          success: true,
-          roomId,
-          joinUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/room/${roomId}`,
-          room: roomData
+        auctionRooms.set(newRoomId, newRoom)
+        return NextResponse.json({ 
+          success: true, 
+          roomId: newRoomId, 
+          room: newRoom,
+          joinUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/room/${newRoomId}`
         })
 
       case 'joinRoom':
-        const { roomId: joinRoomId, nickname } = data
+        if (!roomId || !nickname) {
+          return NextResponse.json({ success: false, error: "Room ID and nickname are required" }, { status: 400 })
+        }
         
-        const room = auctionRooms.get(joinRoomId)
+        const room = auctionRooms.get(roomId)
         if (!room) {
           return NextResponse.json({ success: false, error: "Room not found" }, { status: 404 })
         }
-        
+
         // 중복 닉네임 체크
         if (room.guests.some((g: any) => g.nickname === nickname)) {
-          return NextResponse.json({ success: false, error: "Nickname already exists" }, { status: 409 })
+          return NextResponse.json({ success: false, error: "Nickname already exists" }, { status: 400 })
         }
-        
-        const guest = {
+
+        const newGuest = {
+          socketId: `temp-${Date.now()}`,
           nickname,
           capital: room.initialCapital,
-          joinedAt: new Date().toISOString()
+          hasBidInCurrentRound: false
+        }
+        room.guests.push(newGuest)
+        
+        return NextResponse.json({ success: true, guest: newGuest })
+
+      case 'addItem':
+        if (!roomId || !item) {
+          return NextResponse.json({ success: false, error: "Room ID and item are required" }, { status: 400 })
         }
         
-        room.guests.push(guest)
-        console.log(`[API] Guest ${nickname} joined room ${joinRoomId}. Total guests: ${room.guests.length}`)
-        
-        return NextResponse.json({
-          success: true,
-          nickname,
-          capital: guest.capital,
-          room
-        })
+        const itemRoom = auctionRooms.get(roomId)
+        if (!itemRoom) {
+          return NextResponse.json({ success: false, error: "Room not found" }, { status: 404 })
+        }
 
+        itemRoom.items.push(item)
+        return NextResponse.json({ success: true, item })
+
+      case 'startRound':
+        if (!roomId || !item) {
+          return NextResponse.json({ success: false, error: "Room ID and item are required" }, { status: 400 })
+        }
+        
+        const roundRoom = auctionRooms.get(roomId)
+        if (!roundRoom) {
+          return NextResponse.json({ success: false, error: "Room not found" }, { status: 404 })
+        }
+
+        roundRoom.currentRound++
+        roundRoom.roundStatus = 'ACTIVE'
+        roundRoom.currentItem = item
+        
+        // Reset bid status for all guests
+        roundRoom.guests.forEach((guest: any) => {
+          guest.hasBidInCurrentRound = false
+        })
+        
+        return NextResponse.json({ success: true, room: roundRoom })
+
+      case 'placeBid':
+        if (!roomId || !nickname || bidAmount === undefined || round === undefined) {
+          return NextResponse.json({ success: false, error: "Room ID, nickname, bid amount, and round are required" }, { status: 400 })
+        }
+        
+        const bidRoom = auctionRooms.get(roomId)
+        if (!bidRoom) {
+          return NextResponse.json({ success: false, error: "Room not found" }, { status: 404 })
+        }
+
+        const guest = bidRoom.guests.find((g: any) => g.nickname === nickname)
+        if (!guest) {
+          return NextResponse.json({ success: false, error: "Guest not found" }, { status: 404 })
+        }
+
+        if (guest.capital < bidAmount) {
+          return NextResponse.json({ success: false, error: "Insufficient capital" }, { status: 400 })
+        }
+
+        const newBid = {
+          nickname,
+          amount: bidAmount,
+          timestamp: new Date(),
+          round
+        }
+        
+        bidRoom.bids.push(newBid)
+        guest.hasBidInCurrentRound = true
+        guest.capital -= bidAmount
+        
+        return NextResponse.json({ success: true, bid: newBid })
+
+      case 'endRound':
+        if (!roomId) {
+          return NextResponse.json({ success: false, error: "Room ID is required" }, { status: 400 })
+        }
+        
+        const endRoom = auctionRooms.get(roomId)
+        if (!endRoom) {
+          return NextResponse.json({ success: false, error: "Room not found" }, { status: 404 })
+        }
+
+        endRoom.roundStatus = 'ENDED'
+        return NextResponse.json({ success: true, room: endRoom })
+
+      case 'resetRoom':
+        if (!roomId) {
+          return NextResponse.json({ success: false, error: "Room ID is required" }, { status: 400 })
+        }
+        
+        const resetRoom = auctionRooms.get(roomId)
+        if (!resetRoom) {
+          return NextResponse.json({ success: false, error: "Room not found" }, { status: 404 })
+        }
+
+        resetRoom.status = 'PRE-START'
+        resetRoom.currentRound = 0
+        resetRoom.roundStatus = 'WAITING'
+        resetRoom.bids = []
+        resetRoom.items = []
+        resetRoom.guests.forEach((guest: any) => {
+          guest.capital = resetRoom.initialCapital
+          guest.hasBidInCurrentRound = false
+        })
+        
+        return NextResponse.json({ success: true, room: resetRoom })
 
       default:
-        return NextResponse.json({ success: false, error: "Unknown action" }, { status: 400 })
+        return NextResponse.json({ success: false, error: "Invalid action" }, { status: 400 })
     }
   } catch (error) {
-    console.error("[API] Error in POST handler:", error)
+    console.error("POST Error:", error)
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
 }
