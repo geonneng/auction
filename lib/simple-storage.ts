@@ -295,18 +295,17 @@ export class SimpleAuctionRoom {
     const currentRoundBids = roomData.bids.filter(b => b.round === roomData.currentRound)
     const allItems = Object.values(roomData.auctionItems)
 
+    // 클라이언트가 기대하는 AuctionState 형식으로 반환
     return {
-      room: {
-        id: roomData.id,
-        name: roomData.name,
-        initialCapital: roomData.initialCapital,
-        status: roomData.status,
-        currentRound: roomData.currentRound,
-        roundStatus: roomData.roundStatus,
-        createdAt: roomData.createdAt,
-        lastGuestJoinTime: roomData.lastGuestJoinTime,
-        currentRoundItem: roomData.currentRoundItem,
-      },
+      id: roomData.id,
+      name: roomData.name,
+      initialCapital: roomData.initialCapital,
+      status: roomData.status,
+      currentRound: roomData.currentRound,
+      roundStatus: roomData.roundStatus,
+      createdAt: roomData.createdAt,
+      lastGuestJoinTime: roomData.lastGuestJoinTime,
+      currentRoundItem: roomData.currentRoundItem,
       guests: roomData.guests.map(guest => ({
         nickname: guest.nickname,
         capital: guest.capital,
@@ -352,6 +351,53 @@ export class SimpleAuctionRoom {
     }
 
     return cleaned
+  }
+
+  // API에서 사용하는 추가 메서드들
+  async modifyCapital(roomId: string, nickname: string, newCapital: number): Promise<any> {
+    const roomData = rooms.get(roomId)
+    if (!roomData) {
+      throw new Error("존재하지 않는 방입니다")
+    }
+
+    const guest = roomData.guests.find(g => g.nickname === nickname)
+    if (!guest) {
+      throw new Error("등록되지 않은 참가자입니다")
+    }
+
+    guest.capital = newCapital
+    rooms.set(roomId, roomData)
+    console.log(`[Simple] Modified capital for ${nickname} to ${newCapital}`)
+    
+    return roomData
+  }
+
+  async registerAuctionItem(roomId: string, item: any, round: number): Promise<any> {
+    const newItem = await this.addAuctionItem(roomId, item)
+    await this.setCurrentRoundItem(roomId, newItem)
+    
+    return {
+      item: newItem,
+      message: "경매 물품이 등록되었습니다"
+    }
+  }
+
+  async saveAuctionItem(roomId: string, item: any, guestName: string): Promise<any> {
+    const newItem = await this.addAuctionItem(roomId, {
+      ...item,
+      ownerNickname: guestName,
+      createdBy: guestName
+    })
+    
+    return {
+      success: true,
+      item: newItem,
+      message: "경매 물품이 저장되었습니다"
+    }
+  }
+
+  async getAllAuctionItems(roomId: string): Promise<AuctionItem[]> {
+    return this.getAuctionItems(roomId)
   }
 }
 

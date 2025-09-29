@@ -234,3 +234,6 @@ export class DataRecovery {
     }
   }
 }
+
+// recoverAuctionState 함수를 별도로 export
+export const recoverAuctionState = DataRecovery.recoverAuctionState
