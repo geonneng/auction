@@ -44,51 +44,63 @@ export function AuctionItemProvider({ children, roomId }: AuctionItemProviderPro
   const [selectedGuest, setSelectedGuest] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  // localStorage 키 생성
-  const getStorageKey = (id?: string) => {
-    return id ? `auction-items-${id}` : 'auction-items-global'
-  }
+  // Supabase Realtime 구독을 위한 콜백
+  const handleItemAdded = useCallback((item: any) => {
+    console.log('[AuctionItem] Item added via Realtime:', item)
+    const newItem: AuctionItem = {
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      image: item.image_url,
+      roomId: roomId,
+      createdBy: item.created_by,
+      createdAt: item.created_at
+    }
+    
+    setAuctionItems(prev => ({
+      ...prev,
+      [item.created_by || 'unknown']: newItem
+    }))
+  }, [roomId])
 
-  // 물품 정보 저장
+  // 물품 정보 저장 (Supabase 전용)
   const saveAuctionItem = useCallback(async (item: Omit<AuctionItem, 'id' | 'createdAt'>, guestName: string) => {
     setIsLoading(true)
     try {
-      const newItem: AuctionItem = {
-        ...item,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        roomId: roomId || item.roomId,
-        createdBy: guestName
+      if (!roomId) {
+        throw new Error('Room ID is required')
       }
 
-      // API 서버에 저장
-      if (roomId) {
-        try {
-          const { auctionAPI } = await import('@/lib/api')
-          await auctionAPI.saveAuctionItem(roomId, newItem, guestName)
-          console.log('[AuctionItem] Saved to API server:', newItem)
-        } catch (apiError) {
-          console.error('[AuctionItem] Failed to save to API server:', apiError)
-          // API 저장 실패해도 localStorage에는 저장
+      // Supabase에 저장
+      const { auctionAPI } = await import('@/lib/api')
+      const response = await auctionAPI.saveAuctionItem(roomId, {
+        name: item.name,
+        description: item.description,
+        image_url: item.image,
+        starting_price: 0 // 기본값
+      })
+
+      if (response.success) {
+        console.log('[AuctionItem] Saved to Supabase:', response.item)
+        
+        // 상태 업데이트 (Supabase에서 반환된 데이터 사용)
+        const newItem: AuctionItem = {
+          id: response.item.id,
+          name: response.item.name,
+          description: response.item.description,
+          image: response.item.image_url,
+          roomId: roomId,
+          createdBy: guestName,
+          createdAt: response.item.created_at
         }
+
+        setAuctionItems(prev => ({
+          ...prev,
+          [guestName]: newItem
+        }))
+      } else {
+        throw new Error(response.error || 'Failed to save item')
       }
-
-      // 상태 업데이트
-      setAuctionItems(prev => ({
-        ...prev,
-        [guestName]: newItem
-      }))
-
-      // localStorage에 저장
-      const storageKey = getStorageKey(roomId)
-      const updatedItems = { ...auctionItems, [guestName]: newItem }
-      localStorage.setItem(storageKey, JSON.stringify(updatedItems))
-
-      // 다른 탭/창에 변경사항 알림
-      window.dispatchEvent(new StorageEvent('storage', {
-        key: storageKey,
-        newValue: JSON.stringify(updatedItems)
-      }))
 
     } catch (error) {
       console.error('Failed to save auction item:', error)
@@ -96,9 +108,9 @@ export function AuctionItemProvider({ children, roomId }: AuctionItemProviderPro
     } finally {
       setIsLoading(false)
     }
-  }, [roomId, auctionItems])
+  }, [roomId])
 
-  // 물품 정보 불러오기
+  // 물품 정보 불러오기 (Supabase 전용)
   const loadAuctionItems = useCallback(async (targetRoomId?: string, forceRefresh = false) => {
     const targetRoom = targetRoomId || roomId
     if (!targetRoom) {
@@ -106,55 +118,32 @@ export function AuctionItemProvider({ children, roomId }: AuctionItemProviderPro
       return
     }
     
-    // 캐시된 데이터가 있고 강제 새로고침이 아닌 경우 스킵
-    const storageKey = getStorageKey(targetRoom)
-    const cachedData = localStorage.getItem(storageKey)
-    if (cachedData && !forceRefresh) {
-      try {
-        const parsedItems = JSON.parse(cachedData)
-        setAuctionItems(parsedItems)
-        return
-      } catch (error) {
-        console.error('[AuctionItem] Failed to parse cached data:', error)
-        // 캐시 파싱 실패 시 계속 진행
-      }
-    }
-    
     setIsLoading(true)
     try {
-      // API 서버에서 먼저 조회
-      try {
-        const { auctionAPI } = await import('@/lib/api')
-        const response = await auctionAPI.getAuctionItems(targetRoom)
-        if (response.success && response.items) {
-          console.log('[AuctionItem] Loaded from API server:', response.items)
-          setAuctionItems(response.items)
-          
-          // localStorage에도 저장 (백업용)
-          try {
-            localStorage.setItem(storageKey, JSON.stringify(response.items))
-          } catch (storageError) {
-            console.warn('[AuctionItem] Failed to save to localStorage:', storageError)
+      // Supabase에서 조회
+      const { auctionAPI } = await import('@/lib/api')
+      const response = await auctionAPI.getAuctionItems(targetRoom)
+      
+      if (response.success && response.items) {
+        console.log('[AuctionItem] Loaded from Supabase:', response.items)
+        
+        // Supabase 데이터를 AuctionItem 형식으로 변환
+        const items: { [guestName: string]: AuctionItem } = {}
+        response.items.forEach((item: any) => {
+          items[item.created_by || 'unknown'] = {
+            id: item.id,
+            name: item.name,
+            description: item.description,
+            image: item.image_url,
+            roomId: targetRoom,
+            createdBy: item.created_by,
+            createdAt: item.created_at
           }
-          return
-        }
-      } catch (apiError) {
-        console.error('[AuctionItem] Failed to load from API server:', apiError)
-        // API 실패 시 localStorage에서 로드
-      }
-      
-      // localStorage에서 로드 (API 실패 시 또는 roomId가 없는 경우)
-      const storedItems = localStorage.getItem(storageKey)
-      
-      if (storedItems) {
-        try {
-          const items = JSON.parse(storedItems) as { [guestName: string]: AuctionItem }
-          setAuctionItems(items)
-        } catch (parseError) {
-          console.error('[AuctionItem] Failed to parse stored items:', parseError)
-          setAuctionItems({})
-        }
+        })
+        
+        setAuctionItems(items)
       } else {
+        console.warn('[AuctionItem] No items found or error:', response.error)
         setAuctionItems({})
       }
     } catch (error) {
@@ -178,41 +167,16 @@ export function AuctionItemProvider({ children, roomId }: AuctionItemProviderPro
   // 선택된 게스트의 물품
   const selectedGuestItem = selectedGuest ? auctionItems[selectedGuest] || null : null
 
+  // Realtime은 부모 컴포넌트에서 처리
+  useEffect(() => {
+    if (!roomId) return
+    console.log('[AuctionItem] Ready for room:', roomId)
+  }, [roomId])
+
   // 초기 로드
   useEffect(() => {
     loadAuctionItems()
   }, [loadAuctionItems])
-
-  // storage 변경 감지 (다른 탭에서 변경된 경우)
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      const storageKey = getStorageKey(roomId)
-      if (e.key === storageKey && e.newValue) {
-        try {
-          const items = JSON.parse(e.newValue) as { [guestName: string]: AuctionItem }
-          setAuctionItems(items)
-        } catch (error) {
-          console.error('Failed to parse storage change:', error)
-        }
-      }
-    }
-
-    window.addEventListener('storage', handleStorageChange)
-    
-    // 커스텀 storage 이벤트도 감지 (같은 탭에서의 변경)
-    const handleCustomStorageChange = (e: Event) => {
-      if (e instanceof StorageEvent) {
-        handleStorageChange(e)
-      }
-    }
-    
-    window.addEventListener('storage', handleCustomStorageChange)
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange)
-      window.removeEventListener('storage', handleCustomStorageChange)
-    }
-  }, [roomId])
 
   const value: AuctionItemContextType = {
     auctionItems,

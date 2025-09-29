@@ -29,17 +29,20 @@ export class AuctionAPI {
       try {
         console.log(`[API] Making request to ${url}, attempt ${i + 1}/${maxRetries}`)
         
-        // AbortController로 타임아웃 설정 (10초)
+        // AbortController로 타임아웃 설정 (5초)
         const controller = new AbortController()
         const timeoutId = setTimeout(() => {
-          console.log(`[API] Request timeout after 10 seconds`)
+          console.log(`[API] Request timeout after 5 seconds`)
           controller.abort()
-        }, 10000) // 10초 타임아웃
+        }, 5000) // 5초 타임아웃
         
         const response = await fetch(url, {
           ...options,
           headers: {
             'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
             ...options.headers,
           },
           signal: controller.signal

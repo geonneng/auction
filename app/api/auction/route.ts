@@ -291,7 +291,8 @@ export async function POST(request: NextRequest) {
           .insert({
             room_id: roomId,
             guest_id: guest.id,
-            item_id: currentItem.current_item.id,
+            item_id: currentItem.current_item?.id || null,
+            nickname: nickname,
             amount: bidAmount,
             round: round
           })
@@ -444,7 +445,8 @@ export async function POST(request: NextRequest) {
               name: item.name,
               description: item.description,
               image_url: item.image_url,
-              starting_price: item.starting_price
+              starting_price: item.starting_price,
+              created_by: nickname || 'unknown'
             })
             .select()
             .single()

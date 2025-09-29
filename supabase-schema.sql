@@ -1,3 +1,10 @@
+-- 기존 테이블 및 관련 객체 완전 삭제 (재설정 시 사용)
+-- DROP TABLE IF EXISTS bids CASCADE;
+-- DROP TABLE IF EXISTS auction_items CASCADE;
+-- DROP TABLE IF EXISTS guests CASCADE;
+-- DROP TABLE IF EXISTS auction_rooms CASCADE;
+-- DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;
+
 -- 경매방 테이블
 CREATE TABLE auction_rooms (
   id TEXT PRIMARY KEY,
@@ -31,6 +38,7 @@ CREATE TABLE auction_items (
   description TEXT,
   image_url TEXT,
   starting_price INTEGER,
+  created_by TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -39,7 +47,8 @@ CREATE TABLE bids (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   room_id TEXT NOT NULL REFERENCES auction_rooms(id) ON DELETE CASCADE,
   guest_id UUID NOT NULL REFERENCES guests(id) ON DELETE CASCADE,
-  item_id UUID NOT NULL REFERENCES auction_items(id) ON DELETE CASCADE,
+  item_id UUID REFERENCES auction_items(id) ON DELETE CASCADE,
+  nickname TEXT NOT NULL,
   amount INTEGER NOT NULL,
   round INTEGER NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -105,3 +114,9 @@ $$ language 'plpgsql';
 -- 트리거 생성
 CREATE TRIGGER update_auction_rooms_updated_at BEFORE UPDATE
     ON auction_rooms FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Realtime 활성화
+ALTER PUBLICATION supabase_realtime ADD TABLE auction_rooms;
+ALTER PUBLICATION supabase_realtime ADD TABLE guests;
+ALTER PUBLICATION supabase_realtime ADD TABLE auction_items;
+ALTER PUBLICATION supabase_realtime ADD TABLE bids;

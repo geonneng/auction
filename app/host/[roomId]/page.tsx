@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,6 +21,7 @@ import { useConnectionMonitor } from "@/hooks/use-connection-monitor"
 import { useCleanup } from "@/hooks/use-cleanup"
 import { useOfflineHandler } from "@/hooks/use-offline-handler"
 import { DataValidator } from "@/lib/data-validation"
+import { useAuctionRealtime } from "@/hooks/use-supabase-realtime"
 
 function HostDashboardContent() {
   const params = useParams()
@@ -76,6 +77,63 @@ function HostDashboardContent() {
     }
   })
 
+  // Realtime 업데이트 플래그
+  const [shouldRefresh, setShouldRefresh] = useState(0)
+
+  // Supabase Realtime 구독
+  useAuctionRealtime(roomId, {
+    onRoomUpdate: (room) => {
+      console.log("[Host] Room updated via Realtime:", room)
+      // 플래그를 변경하여 데이터 새로고침 트리거
+      setShouldRefresh(prev => prev + 1)
+    },
+    onGuestJoin: (guest) => {
+      console.log("[Host] Guest joined via Realtime:", guest)
+      toast({
+        title: "새 참가자",
+        description: `${guest.nickname}님이 참가했습니다.`,
+      })
+      setShouldRefresh(prev => prev + 1)
+    },
+    onGuestLeave: (guest) => {
+      console.log("[Host] Guest left via Realtime:", guest)
+      toast({
+        title: "참가자 퇴장",
+        description: `${guest.nickname}님이 퇴장했습니다.`,
+      })
+      setShouldRefresh(prev => prev + 1)
+    },
+    onBidPlaced: (bid) => {
+      console.log("[Host] Bid placed via Realtime:", bid)
+      toast({
+        title: "새 입찰",
+        description: `${bid.nickname}님이 ${bid.amount.toLocaleString()}원에 입찰했습니다.`,
+      })
+      setShouldRefresh(prev => prev + 1)
+    },
+    onItemAdded: (item) => {
+      console.log("[Host] Item added via Realtime:", item)
+      loadAuctionItems()
+    }
+  })
+
+  // 플래그 변경 시 데이터 새로고침
+  useEffect(() => {
+    if (shouldRefresh > 0) {
+      loadRoomState()
+    }
+  }, [shouldRefresh])
+
+  // 연결 상태 표시
+  useEffect(() => {
+    if (isConnected) {
+      toast({
+        title: "연결됨",
+        description: "실시간 통신이 활성화되었습니다.",
+      })
+    }
+  }, [isConnected])
+
   // 정리 로직
   const { createInterval, createTimeout, cleanup } = useCleanup({
     onUnmount: () => {
@@ -83,25 +141,69 @@ function HostDashboardContent() {
     }
   })
 
+  // loadRoomState 함수를 메모화
+  const loadRoomState = useCallback(async () => {
+    try {
+      console.log("[Host] Loading room state for roomId:", roomId)
+      const response = await auctionAPI.getState(roomId)
+      console.log("[Host] Response:", response)
+      
+      if (response.success) {
+        let newState: any = response.state ?? response.room ?? {}
+        
+        // 데이터 무결성 검증
+        const validation = DataValidator.validateAuctionState(newState)
+        if (!validation.isValid) {
+          console.error("[Host] Invalid auction state:", validation.errors)
+          // 데이터 복구 시도
+          const recoveredState = DataValidator.recoverAuctionState(newState)
+          newState = recoveredState
+        }
+        
+        setAuctionState(newState)
+        setIsConnected(true)
+        
+        // 참가자 변화 감지 및 알림
+        if (newState.guestCount > previousGuestCount) {
+          console.log("[Host] New guest detected!")
+        }
+        setPreviousGuestCount(newState.guestCount || 0)
+        
+        // URL 설정
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
+        setJoinUrl(`${baseUrl}/room/${roomId}`)
+      } else {
+        console.error("[Host] Failed to load room state:", response.error)
+        setIsConnected(false)
+      }
+    } catch (error) {
+      console.error("[Host] Error loading room state:", error)
+      setIsConnected(false)
+    }
+  }, [roomId, previousGuestCount])
+
+  // 초기 로드 및 백업 폴링
   useEffect(() => {
     let isPolling = true
-    let retryCount = 0
-    let consecutiveErrors = 0
-    const maxConsecutiveErrors = 10
     
-    // Load room state on mount
-    const loadRoomState = async () => {
+    const initialAndBackupPoll = async () => {
       if (!isPolling) return
-      
-      try {
-        console.log("[Host] Polling room state for roomId:", roomId)
-        const response = await auctionAPI.getState(roomId)
-        console.log("[Host] Poll response:", response)
-        console.log("[Host] Guests in response:", response.state?.guests)
-        console.log("[Host] Guest count in response:", response.state?.guestCount)
-        console.log("[Host] Last guest join time:", response.state?.lastGuestJoinTime)
-        
-        if (response.success) {
+      await loadRoomState()
+    }
+
+    // 초기 로드
+    initialAndBackupPoll()
+    
+    // 백업 폴링 (5초마다)
+    const interval = createInterval(initialAndBackupPoll, 5000)
+
+    return () => {
+      isPolling = false
+    }
+  }, [roomId, loadRoomState])
+
+  // 핸들러 함수들
+  const handleStartAuction = async () => {
           let newState: any = response.state ?? response.room ?? {}
           
           // 데이터 무결성 검증
@@ -205,52 +307,46 @@ function HostDashboardContent() {
             setLastGuestJoinTime(currentLastGuestJoinTime)
           }
           
-          // 연결 상태 기록
-          recordRequest(true)
-          consecutiveErrors = 0
-          retryCount = 0
-        } else {
-          console.error("[Host] Failed to get state:", response.error)
-          recordRequest(false)
-          consecutiveErrors++
-        }
-      } catch (error) {
-        console.error("[Host] Error polling room state:", error)
-        recordRequest(false)
-        consecutiveErrors++
-      }
-      
-      retryCount++
-      
-      // Stop polling after too many consecutive errors
-      if (consecutiveErrors >= maxConsecutiveErrors) {
-        console.error("[Host] Too many consecutive errors, stopping polling")
-        isPolling = false
-        setIsConnected(false)
-      }
-      
-      // Continue polling if still active
-      if (isPolling) {
-        // 더 빠른 동기화를 위해 폴링 간격 단축
-        const pollingInterval = retryCount < 60 ? 500 : 1000 // 첫 30초는 0.5초, 이후 1초
-        createTimeout(loadRoomState, pollingInterval)
-      }
-    }
+  }
 
-    loadRoomState()
-    
-    return () => {
-      isPolling = false
-    }
-  }, [roomId])
+  const handleStartAuction = async () => {
+    if (!auctionState) return
+
+    try {
+      const response = await auctionAPI.startAuction(roomId)
+      if (response.success) {
+        toast({
+          title: "경매 시작",
+          description: "경매가 시작되었습니다!",
+        })
+        await loadRoomState()
+      } else {
+        toast({
+          title: "경매 시작 실패",
+          description: response.error || "경매를 시작할 수 없습니다.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Failed to start auction:", error)
+      toast({
+        title: "오류",
+        description: "서버에 연결할 수 없습니다.",
+        variant: "destructive",
+      })
+  }
 
   const handleStartAuction = async () => {
     if (!auctionState) return
     
     try {
-      const response = await auctionAPI.startAuction(auctionState.id)
+      const response = await auctionAPI.startAuction(roomId)
       if (response.success) {
-        setAuctionState(response.state)
+        toast({
+          title: "경매 시작",
+          description: "경매가 시작되었습니다!",
+        })
+        await loadRoomState()
         
         // 경매 시작 후 즉시 상태 새로고침으로 게스트 페이지에 전달
         setTimeout(async () => {

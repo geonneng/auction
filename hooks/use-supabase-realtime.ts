@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { getSupabase } from '@/lib/supabase'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
@@ -18,6 +18,10 @@ export function useSupabaseRealtime({
   onDelete
 }: UseSupabaseRealtimeOptions) {
   const [channel, setChannel] = useState<RealtimeChannel | null>(null)
+  
+  // 콜백을 ref로 관리하여 의존성 문제 해결
+  const callbacksRef = useRef({ onInsert, onUpdate, onDelete })
+  callbacksRef.current = { onInsert, onUpdate, onDelete }
 
   useEffect(() => {
     // 기존 채널 정리
@@ -42,13 +46,13 @@ export function useSupabaseRealtime({
           
           switch (payload.eventType) {
             case 'INSERT':
-              onInsert?.(payload)
+              callbacksRef.current.onInsert?.(payload)
               break
             case 'UPDATE':
-              onUpdate?.(payload)
+              callbacksRef.current.onUpdate?.(payload)
               break
             case 'DELETE':
-              onDelete?.(payload)
+              callbacksRef.current.onDelete?.(payload)
               break
           }
         }
@@ -61,7 +65,7 @@ export function useSupabaseRealtime({
     return () => {
       newChannel.unsubscribe()
     }
-  }, [table, filter, onInsert, onUpdate, onDelete])
+  }, [table, filter]) // 콜백은 의존성에서 제외 (ref 패턴으로 변경)
 
   return channel
 }
