@@ -23,7 +23,7 @@ interface Guest {
 interface Bid {
   nickname: string
   amount: number
-  timestamp: Date
+  timestamp: string
   round: number
 }
 
@@ -54,7 +54,7 @@ interface RoomData {
   } | null
   guests: Guest[]
   bids: Bid[]
-  auctionItems: { [guestName: string]: AuctionItem }
+  auctionItems: { [id: string]: AuctionItem }
 }
 
 export class FileAuctionRoom {
@@ -205,7 +205,7 @@ export class FileAuctionRoom {
     const bid: Bid = {
       nickname,
       amount,
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
       round: roomData.currentRound,
     }
 
