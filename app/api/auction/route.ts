@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { fileAuctionRoom as auctionRoom } from '@/lib/file-storage'
+import { simpleAuctionRoom as auctionRoom } from '@/lib/simple-storage'
 
 // Generate room ID helper
 function generateRoomId() {
