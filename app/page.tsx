@@ -21,6 +21,7 @@ import {
   Users
 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useAuctionActions } from "@/stores/auction-store"
 import { auctionAPI } from "@/lib/api"
 import { toast } from "@/hooks/use-toast"
 import { TraditionalPattern } from "@/components/ui/traditional-pattern"
@@ -30,6 +31,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 
 export default function HomePage() {
   const router = useRouter()
+  const actions = useAuctionActions()
   const [currentStep, setCurrentStep] = useState(1)
   const [auctionData, setAuctionData] = useState({
     name: "",
@@ -76,6 +78,8 @@ export default function HomePage() {
     setIsCreating(true)
     
     try {
+      // 새 경매 시작 전에 스토어 리셋 (이전 방 상태 잔존 방지)
+      actions.resetStore()
       const response = await auctionAPI.createRoom(capital, auctionName)
       if (response.success) {
         console.log("[Create Auction] Room created, redirecting to:", response.roomId)

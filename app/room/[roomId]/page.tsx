@@ -447,14 +447,7 @@ export default function GuestRoom() {
           </Card>
 
           {/* 현재 경매 물품 */}
-          {(() => {
-            console.log('[Guest] Rendering current item section:', {
-              guestStatus: guestData.status,
-              currentRoundItem: currentRoundItem,
-              shouldShow: true
-            })
-            return true
-          })() && (
+          {guestData.status === "ACTIVE" && (
             <Card onClick={() => currentRoundItem && setIsItemDialogOpen(true)} className="cursor-pointer hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -518,7 +511,7 @@ export default function GuestRoom() {
             </DialogContent>
           </Dialog>
 
-          {/* 입찰 섹션 */}
+          {/* 입찰 섹션 - 항상 표시 */}
           {guestData.status === "ACTIVE" && (
             <Card>
               <CardHeader>
@@ -565,28 +558,6 @@ export default function GuestRoom() {
             </Card>
           )}
 
-          {/* 현재 라운드 아이템 */}
-          {currentRoundItem && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="w-5 h-5" />
-                  현재 경매 물품
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold">{currentRoundItem.name}</h3>
-                  {currentRoundItem.description && (
-                    <p className="text-muted-foreground">{currentRoundItem.description}</p>
-                  )}
-                  {currentRoundItem.starting_price && (
-                    <p className="text-sm">시작가: {currentRoundItem.starting_price.toLocaleString()}원</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* 라운드 결과 */}
           {roundResults && (

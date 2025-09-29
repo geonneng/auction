@@ -674,48 +674,56 @@ export default function DynamicGuestRoom() {
           )}
 
           {/* Current Round Item (click to enlarge) */}
-          {currentRoundItem && (
-            <Card onClick={() => setIsItemDialogOpen(true)} className="cursor-pointer hover:shadow-lg transition-shadow">
+          {guestData.status === "ACTIVE" && (
+            <Card onClick={() => currentRoundItem && setIsItemDialogOpen(true)} className="cursor-pointer hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Package className="h-5 w-5" />
-                  현재 라운드 경매 물품
+                  현재 경매 물품
                 </CardTitle>
                 <CardDescription>
                   라운드 {guestData.currentRound}의 경매 물품입니다.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <h3 className="font-semibold text-2xl text-gray-900">{currentRoundItem.item.name}</h3>
-                      <p className="text-lg text-gray-700 mt-3 leading-relaxed">{currentRoundItem.item.description}</p>
-                      {currentRoundItem.item.startingPrice && (
-                        <div className="mt-2">
-                          <span className="text-sm text-muted-foreground">시작가: </span>
-                          <span className="font-semibold text-primary">
-                            {currentRoundItem.item.startingPrice.toLocaleString()}원
-                          </span>
+                {currentRoundItem ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <h3 className="font-semibold text-2xl text-gray-900">{currentRoundItem.item.name}</h3>
+                        <p className="text-lg text-gray-700 mt-3 leading-relaxed">{currentRoundItem.item.description}</p>
+                        {currentRoundItem.item.startingPrice && (
+                          <div className="mt-2">
+                            <span className="text-sm text-muted-foreground">시작가: </span>
+                            <span className="font-semibold text-primary">
+                              {currentRoundItem.item.startingPrice.toLocaleString()}원
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      {currentRoundItem.item.image && (
+                        <div className="flex justify-center">
+                          <img 
+                            src={currentRoundItem.item.image} 
+                            alt={currentRoundItem.item.name}
+                            className="max-w-full h-64 object-contain rounded-xl border-2 shadow"
+                          />
                         </div>
                       )}
                     </div>
-                    {currentRoundItem.item.image && (
-                      <div className="flex justify-center">
-                        <img 
-                          src={currentRoundItem.item.image} 
-                          alt={currentRoundItem.item.name}
-                          className="max-w-full h-64 object-contain rounded-xl border-2 shadow"
-                        />
+                    {currentRoundItem.item.ownerNickname && (
+                      <div className="text-sm text-muted-foreground">
+                        등록자: {currentRoundItem.item.ownerNickname}
                       </div>
                     )}
                   </div>
-                  {currentRoundItem.item.ownerNickname && (
-                    <div className="text-sm text-muted-foreground">
-                      등록자: {currentRoundItem.item.ownerNickname}
-                    </div>
-                  )}
-                </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Package className="h-16 w-16 text-gray-400 mx-auto mb-6" />
+                    <p className="text-lg text-gray-500 mb-2">현재 경매 물품이 등록되지 않았습니다.</p>
+                    <p className="text-sm text-gray-400">호스트가 물품을 등록하면 여기에 표시됩니다.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

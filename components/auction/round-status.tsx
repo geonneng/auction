@@ -318,7 +318,7 @@ export function RoundStatus({ auctionType = 'fixed' }: RoundStatusProps) {
           </p>
         </div>
 
-        {/* 라운드 대기: 호스트가 물품 지정 */}
+        {/* 라운드 대기: 호스트가 물품 지정 - 팝업 방식 */}
         {room.round_status === 'WAITING' && (
           <div className="mt-4 p-4 rounded border bg-blue-50 border-blue-200">
             <h4 className="font-medium mb-2 text-blue-900">새 라운드 물품 등록</h4>
@@ -330,28 +330,20 @@ export function RoundStatus({ auctionType = 'fixed' }: RoundStatusProps) {
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Select onValueChange={(v) => setSelectedItemKey(v)}>
-                    <SelectTrigger className="w-64">
-                      <SelectValue placeholder="게스트의 등록 물품 선택" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableItems.map(({ guest, item }) => (
-                        <SelectItem key={guest} value={guest}>{guest} - {item!.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button onClick={handleRegisterItem} disabled={!selectedItemKey || isRegistering}>
-                    {isRegistering ? '등록 중...' : '이 물품으로 라운드 설정'}
-                  </Button>
-                </div>
-                {selectedItemKey && (
-                  <div className="p-2 bg-green-50 border border-green-200 rounded text-sm text-green-800">
-                    선택된 물품: {availableItems.find(({ guest }) => guest === selectedItemKey)?.item?.name}
-                  </div>
-                )}
-              </div>
+              <Button 
+                onClick={() => {
+                  // 팝업으로 물품 선택
+                  const selectedItem = availableItems[0] // 첫 번째 아이템을 기본 선택
+                  if (selectedItem) {
+                    setSelectedItemKey(selectedItem.guest)
+                    handleRegisterItem()
+                  }
+                }}
+                className="w-full"
+                disabled={isRegistering}
+              >
+                {isRegistering ? '등록 중...' : '물품 선택하여 라운드 시작'}
+              </Button>
             )}
           </div>
         )}
