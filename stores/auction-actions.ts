@@ -352,6 +352,10 @@ export const createAuctionActions = (
           throw new Error(response.error || 'Failed to start round')
         }
 
+        // 새 라운드 시작 시 이전 라운드 입찰 정보 초기화
+        console.log('[Actions] Clearing current round bids for new round')
+        actions.clearCurrentRoundBids()
+
         // Optimistic update: Realtime이 느릴 수 있으므로 즉시 반영
         setState((prev: any) => ({
           room: prev.room
@@ -361,6 +365,7 @@ export const createAuctionActions = (
                 round_status: 'ACTIVE',
               }
             : prev.room,
+          currentRoundBids: [],  // 명시적으로 빈 배열로 초기화
           lastUpdated: new Date(),
         }), false, 'startRound:optimisticUpdate')
 
@@ -398,11 +403,15 @@ export const createAuctionActions = (
           throw new Error(response.error || 'Failed to end round')
         }
         
+        console.log('[Actions] endRound - clearing current round bids')
+        
         // 라운드 종료 후 상태 낙관적 업데이트: 다음 라운드 준비 상태로 설정
         setState((prev: any) => ({
           room: prev.room ? { ...prev.room, round_status: 'WAITING' } : prev.room,
+          currentRoundBids: [],  // 명시적으로 초기화
           lastUpdated: new Date(),
         }), false, 'endRound:optimistic')
+        
         actions.clearCurrentRoundBids()
       } catch (error) {
         actions.setError(error instanceof Error ? error.message : 'Unknown error')

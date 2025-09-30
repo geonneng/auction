@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react'
-import { useIsConnected, useLastUpdated, useAuctionActions } from '@/stores/auction-store'
+import { useIsConnected, useLastUpdated, useAuctionActions, useAuctionStore } from '@/stores/auction-store'
 import { getSupabase } from '@/lib/supabase'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { AuctionRoom, Guest, Bid, AuctionItem } from '@/types/auction'
@@ -49,7 +49,21 @@ export function useAuctionRealtime({
     const room = payload.new as AuctionRoom
     console.log('[Realtime-New] Room updated:', room)
     
+    // 방 정보 업데이트
     actions.updateRoom(room)
+    
+    // 라운드가 변경되면 currentRoundBids를 다시 필터링
+    const state = useAuctionStore.getState()
+    if (state.bids && room.current_round) {
+      const newCurrentRoundBids = state.bids.filter((bid: Bid) => bid.round === room.current_round)
+      console.log('[Realtime-New] Re-filtering bids for new round:', {
+        currentRound: room.current_round,
+        totalBids: state.bids.length,
+        currentRoundBids: newCurrentRoundBids.length
+      })
+      actions.setBids(state.bids)  // setBids가 자동으로 currentRoundBids 필터링
+    }
+    
     callbacksRef.current.onRoomUpdate?.(room)
   }, [actions])
   
