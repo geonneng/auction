@@ -289,12 +289,21 @@ export async function POST(request: NextRequest) {
         // 현재 방 상태 및 아이템 가져오기
         const { data: roomRow } = await supabaseAdmin
           .from('auction_rooms')
-          .select('current_item, current_round')
+          .select('current_item, current_round, round_status')
           .eq('id', roomId)
           .single()
 
-        const effectiveRound = (roomRow?.current_round ?? round ?? 1)
+        // 클라이언트가 보낸 round를 우선 사용 (Optimistic update와 동기화)
+        // round가 없으면 서버의 current_round 사용
+        const effectiveRound = round || roomRow?.current_round || 1
         const isDynamicAuction = auctionType === 'dynamic'
+        
+        console.log('[placeBid] Round info:', {
+          clientRound: round,
+          serverRound: roomRow?.current_round,
+          effectiveRound,
+          roundStatus: roomRow?.round_status
+        })
         
         // 변동입찰: 현재 라운드의 최고 입찰자 찾기 (환원용)
         let currentHighestBid = null
