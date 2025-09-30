@@ -195,7 +195,15 @@ export const createAuctionActions = (
     // 입찰 관리
     setBids: (bids) => {
       const state = getState()
-      const currentRoundBids = bids.filter((bid: Bid) => bid.round === state.room?.current_round)
+      const currentRound = state.room?.current_round
+      const currentRoundBids = bids.filter((bid: Bid) => bid.round === currentRound)
+      
+      console.log('[setBids] Filtering bids:', {
+        totalBids: bids.length,
+        currentRound,
+        currentRoundBids: currentRoundBids.length,
+        allRounds: [...new Set(bids.map(b => b.round))]
+      })
       
       setState(() => ({
         bids,
@@ -207,9 +215,18 @@ export const createAuctionActions = (
     addBid: (bid) => {
       setState((state: any) => {
         const newBids = [...state.bids, bid]
-        const currentRoundBids = bid.round === state.room?.current_round
+        const isCurrentRound = bid.round === state.room?.current_round
+        const currentRoundBids = isCurrentRound
           ? [...state.currentRoundBids, bid]
           : state.currentRoundBids
+        
+        console.log('[addBid] Adding bid:', {
+          bidRound: bid.round,
+          currentRound: state.room?.current_round,
+          isCurrentRound,
+          previousCount: state.currentRoundBids.length,
+          newCount: currentRoundBids.length
+        })
         
         return {
           bids: newBids,
@@ -408,15 +425,24 @@ export const createAuctionActions = (
         
         if (response.success && response.room) {
           const room = response.room
+          const currentRoundBids = (room.bids || []).filter(
+            (bid: Bid) => bid.round === room.current_round
+          )
+          
+          console.log('[syncWithServer] Syncing data:', {
+            roomId: room.id,
+            currentRound: room.current_round,
+            totalBids: room.bids?.length || 0,
+            currentRoundBids: currentRoundBids.length,
+            guestCount: room.guests?.length || 0
+          })
           
           setState(() => ({
             room,
             guests: room.guests || [],
             items: room.items || [],
             bids: room.bids || [],
-            currentRoundBids: (room.bids || []).filter(
-              (bid: Bid) => bid.round === room.current_round
-            ),
+            currentRoundBids,
             isConnected: true,
             lastUpdated: new Date(),
           }), false, 'syncWithServer')
