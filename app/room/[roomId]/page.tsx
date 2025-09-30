@@ -87,14 +87,14 @@ export default function GuestRoom() {
     }
   }, [guestData, isConnected, loadCurrentRoundItem])
 
-  // 주기적으로 현재 라운드 아이템 확인 (5초마다)
+  // 주기적으로 현재 라운드 아이템 확인 (3초마다 - 더 빠른 업데이트)
   React.useEffect(() => {
     if (!guestData || !isConnected) return
 
     const interval = setInterval(() => {
       console.log('[Guest] Periodic check for current round item')
       loadCurrentRoundItem()
-    }, 5000)
+    }, 3000)
 
     return () => clearInterval(interval)
   }, [guestData, isConnected, loadCurrentRoundItem])
@@ -242,8 +242,8 @@ export default function GuestRoom() {
     // 초기 체크
     initialAndBackupPoll()
     
-    // 백업 폴링 (5초마다)  
-    const interval = createInterval(initialAndBackupPoll, 5000)
+    // 백업 폴링 (2초마다 - 더 빠른 업데이트)  
+    const interval = createInterval(initialAndBackupPoll, 2000)
 
     return () => {
       isPolling = false

@@ -13,7 +13,17 @@ export function getSupabase(): SupabaseClient {
     throw new Error('Supabase env missing: NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY')
   }
 
-  cachedAnonClient = createClient(supabaseUrl, supabaseAnonKey)
+  cachedAnonClient = createClient(supabaseUrl, supabaseAnonKey, {
+    realtime: {
+      params: {
+        eventsPerSecond: 10
+      }
+    },
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false
+    }
+  })
   return cachedAnonClient
 }
 

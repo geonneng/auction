@@ -32,7 +32,12 @@ export function useSupabaseRealtime({
     // 새로운 채널 생성
     const supabase = getSupabase()
     const newChannel = supabase
-      .channel(`${table}_changes`)
+      .channel(`${table}_changes_${Date.now()}`, {
+        config: {
+          broadcast: { self: false },
+          presence: { key: '' },
+        },
+      })
       .on(
         'postgres_changes',
         {
@@ -42,7 +47,7 @@ export function useSupabaseRealtime({
           filter: filter
         },
         (payload) => {
-          console.log('Realtime event received:', payload)
+          console.log('[Realtime] Event received:', payload.eventType, 'from', table, payload)
           
           switch (payload.eventType) {
             case 'INSERT':
@@ -57,12 +62,22 @@ export function useSupabaseRealtime({
           }
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('[Realtime] Subscription status for', table, ':', status)
+        if (status === 'SUBSCRIBED') {
+          console.log('[Realtime] Successfully subscribed to', table)
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('[Realtime] Channel error for', table)
+        } else if (status === 'TIMED_OUT') {
+          console.error('[Realtime] Subscription timed out for', table)
+        }
+      })
 
     setChannel(newChannel)
 
     // 클린업
     return () => {
+      console.log('[Realtime] Unsubscribing from', table)
       newChannel.unsubscribe()
     }
   }, [table, filter]) // 콜백은 의존성에서 제외 (ref 패턴으로 변경)

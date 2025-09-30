@@ -281,8 +281,8 @@ export default function DynamicGuestRoom() {
     // Initial check
     checkRoomAndPoll()
     
-    // Poll every 1 second for faster updates
-    const interval = createInterval(checkRoomAndPoll, 1000)
+    // Poll every 1.5 seconds for faster updates with better balance
+    const interval = createInterval(checkRoomAndPoll, 1500)
 
     return () => {
       isPolling = false
