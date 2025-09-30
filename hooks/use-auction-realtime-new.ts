@@ -74,13 +74,19 @@ export function useAuctionRealtime({
   
   const handleBidEvent = useCallback((payload: any) => {
     const bid = payload.new as Bid
-    console.log('[Realtime] Bid placed:', bid)
+    console.log('[Realtime] Bid event received:', {
+      eventType: payload.eventType,
+      bid: bid
+    })
     
+    // INSERT 이벤트 체크 (대소문자 확인)
     if (payload.eventType === 'INSERT') {
       console.log('[Realtime] Calling actions.addBid with:', bid)
       actions.addBid(bid)
       console.log('[Realtime] actions.addBid called successfully')
       callbacksRef.current.onBidPlaced?.(bid)
+    } else {
+      console.warn('[Realtime] Bid event is not INSERT, eventType:', payload.eventType)
     }
   }, [actions])
   
@@ -137,12 +143,15 @@ export function useAuctionRealtime({
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',  // 모든 이벤트 받아서 디버깅
           schema: 'public',
           table: 'bids',
           filter: `room_id=eq.${roomId}`
         },
-        handleBidEvent
+        (payload) => {
+          console.log('[Realtime] Bids table event:', payload.eventType, payload)
+          handleBidEvent(payload)
+        }
       )
       
       // 아이템 추가 구독
