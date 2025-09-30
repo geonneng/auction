@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+export const maxDuration = 30 // Vercel Pro: 30초, Hobby: 10초
 
 // Generate room ID helper
 function generateRoomId() {
@@ -15,11 +16,15 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const roomId = searchParams.get('roomId')
 
+    console.log('[API GET] Request received for roomId:', roomId)
+
     if (!roomId) {
+      console.error('[API GET] Missing roomId')
       return NextResponse.json({ success: false, error: "Room ID is required" }, { status: 400 })
     }
 
     // 경매방 정보 가져오기
+    console.log('[API GET] Fetching room data from Supabase...')
     const supabaseAdmin = getSupabaseAdmin()
     const { data: room, error: roomError } = await supabaseAdmin
       .from('auction_rooms')
@@ -32,39 +37,49 @@ export async function GET(request: NextRequest) {
       .eq('id', roomId)
       .single()
 
-    if (roomError || !room) {
+    if (roomError) {
+      console.error('[API GET] Supabase error:', roomError)
+      return NextResponse.json({ 
+        success: false, 
+        error: "Room not found",
+        details: roomError.message 
+      }, { status: 404 })
+    }
+
+    if (!room) {
+      console.error('[API GET] Room not found:', roomId)
       return NextResponse.json({ success: false, error: "Room not found" }, { status: 404 })
     }
+
+    console.log('[API GET] Room data fetched successfully:', {
+      roomId: room.id,
+      guestCount: room.guests?.length || 0,
+      bidsCount: room.bids?.length || 0
+    })
 
     return NextResponse.json(
       { success: true, room },
       { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
     )
   } catch (error) {
-    console.error("GET Error:", error)
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+    console.error("[API GET] Unexpected error:", error)
+    return NextResponse.json({ 
+      success: false, 
+      error: "Internal server error",
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
+  let action = 'unknown'
   try {
-    // 환경 변수 확인
-    const envSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
-    console.log("Environment check:", {
-      hasUrl: !!envSupabaseUrl,
-      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      url: envSupabaseUrl?.substring(0, 20) + "..."
-    })
+    const body = await request.json()
+    action = body.action || 'unknown'
+    const { roomId, nickname, initialCapital, auctionName, item, itemData, guestName, bidAmount, round, newCapital, auctionType } = body
     
-    if (!envSupabaseUrl || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      console.error("Missing Supabase environment variables")
-      return NextResponse.json({ 
-        success: false, 
-        error: "Server configuration error" 
-      }, { status: 500 })
-    }
-
-    const { action, roomId, nickname, initialCapital, auctionName, item, itemData, guestName, bidAmount, round, newCapital, auctionType } = await request.json()
+    console.log('[API POST] Request received:', { action, roomId, nickname, auctionType })
+    
     const supabaseAdmin = getSupabaseAdmin()
 
     switch (action) {
@@ -666,10 +681,16 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, room: resetRoom })
 
       default:
+        console.error('[API POST] Invalid action:', action)
         return NextResponse.json({ success: false, error: "Invalid action" }, { status: 400 })
     }
   } catch (error) {
-    console.error("POST Error:", error)
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+    console.error(`[API POST] Error in action '${action}':`, error)
+    return NextResponse.json({ 
+      success: false, 
+      error: "Internal server error",
+      actionName: action,
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }
