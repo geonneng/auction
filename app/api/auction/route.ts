@@ -413,11 +413,12 @@ export async function POST(request: NextRequest) {
           .update(updateData)
           .eq('id', guest.id)
         
-        console.log(`[Auction] Bid placed - Type: ${auctionType}, Previous: ${previousBidAmount}, New: ${bidAmount}, Capital: ${guest.capital} -> ${updatedCapital}`)
+        console.log(`[Auction] Bid placed - Type: ${auctionType}, Round: ${effectiveRound}, Previous: ${previousBidAmount}, New: ${bidAmount}, Capital: ${guest.capital} -> ${updatedCapital}`)
         
         return NextResponse.json({ 
           success: true, 
           bid: newBid, 
+          round: effectiveRound,  // 명시적으로 라운드 번호 반환
           remainingCapital: updatedCapital,
           previousBidAmount: isDynamicAuction ? previousBidAmount : undefined
         })

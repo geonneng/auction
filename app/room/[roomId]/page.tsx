@@ -386,7 +386,14 @@ export default function GuestRoom() {
     setError("")
 
     try {
+      console.log("[Fixed Guest] Placing bid:", { roomId, nickname: guestData.nickname, amount, currentRound: guestData.currentRound })
       const response = await auctionAPI.placeBid(roomId, guestData.nickname, amount, guestData.currentRound || 1, 'fixed')
+      console.log("[Fixed Guest] Bid response:", { 
+        success: response.success, 
+        serverRound: response.round,
+        clientRound: guestData.currentRound,
+        bid: response.bid 
+      })
       if (response.success) {
         toast({
           title: "입찰 완료",

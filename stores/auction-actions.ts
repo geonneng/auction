@@ -356,18 +356,21 @@ export const createAuctionActions = (
         console.log('[Actions] Clearing current round bids for new round')
         actions.clearCurrentRoundBids()
 
-        // Optimistic update: Realtime이 느릴 수 있으므로 즉시 반영
-        setState((prev: any) => ({
-          room: prev.room
-            ? {
-                ...prev.room,
-                current_round: (prev.room.current_round || 0) + 1,
-                round_status: 'ACTIVE',
-              }
-            : prev.room,
-          currentRoundBids: [],  // 명시적으로 빈 배열로 초기화
-          lastUpdated: new Date(),
-        }), false, 'startRound:optimisticUpdate')
+        // 서버 응답의 실제 라운드 번호 사용 (배포 환경 타이밍 이슈 방지)
+        const updatedRoom = response.room || response.state?.room
+        if (updatedRoom) {
+          console.log('[Actions] Using server response round:', updatedRoom.current_round)
+          setState((prev: any) => ({
+            room: {
+              ...prev.room,
+              ...updatedRoom,
+              current_round: updatedRoom.current_round,
+              round_status: updatedRoom.round_status,
+            },
+            currentRoundBids: [],  // 명시적으로 빈 배열로 초기화
+            lastUpdated: new Date(),
+          }), false, 'startRound:serverResponse')
+        }
 
         // 현재 등록된 아이템이 있다면 currentRoundItem으로 설정
         if (state.room.current_item && state.room.current_item.item) {

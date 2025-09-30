@@ -609,9 +609,14 @@ export default function DynamicGuestRoom() {
     setIsBidding(true)
     
     try {
-      console.log("[Dynamic Guest] Placing bid:", { roomId, nickname: guestData.nickname, amount })
+      console.log("[Dynamic Guest] Placing bid:", { roomId, nickname: guestData.nickname, amount, currentRound: guestData.currentRound })
       const response = await auctionAPI.placeBid(roomId, guestData.nickname, amount, guestData.currentRound || 1, 'dynamic')
-      console.log("[Dynamic Guest] Bid response:", response)
+      console.log("[Dynamic Guest] Bid response:", { 
+        success: response.success, 
+        serverRound: response.round,
+        clientRound: guestData.currentRound,
+        bid: response.bid 
+      })
       
       if (response.success) {
         // 내 현재 입찰 금액 업데이트 (재입찰 시 환원 계산용)
