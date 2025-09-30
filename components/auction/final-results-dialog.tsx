@@ -15,6 +15,7 @@ interface FinalResultsDialogProps {
   room: AuctionRoom
   guests: AuctionGuest[]
   allBids: AuctionBid[]
+  auctionType?: 'fixed' | 'dynamic'
 }
 
 export function FinalResultsDialog({ 
@@ -22,7 +23,8 @@ export function FinalResultsDialog({
   onClose, 
   room, 
   guests, 
-  allBids 
+  allBids,
+  auctionType = 'fixed'
 }: FinalResultsDialogProps) {
   const router = useRouter()
   const [results, setResults] = useState<{
@@ -55,7 +57,6 @@ export function FinalResultsDialog({
     
     // 각 참가자별 결과 계산
     const guestResults = guests.map(guest => {
-      let remainingCapital = guest.capital || 0
       let wonRounds = 0
       let totalSpent = 0
       let wonRoundNumbers: number[] = []
@@ -71,15 +72,19 @@ export function FinalResultsDialog({
           if (guestBid.amount === maxBid) {
             wonRounds++
             totalSpent += guestBid.amount
-            remainingCapital -= guestBid.amount
             wonRoundNumbers.push(round)
           }
         }
       }
 
+      // 고정입찰과 변동입찰 모두 guest.capital에 실제 남은 자본금이 반영되어 있음
+      // - 고정입찰: 입찰 시 차감, 환원 없음
+      // - 변동입찰: 입찰 시 차감, 새 최고 입찰 나오면 즉시 환원
+      const remainingCapital = guest.capital || 0
+
       return {
         guest,
-        remainingCapital: Math.max(0, remainingCapital),
+        remainingCapital,
         wonRounds,
         totalSpent,
         finalRank: 0, // 나중에 계산

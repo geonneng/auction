@@ -82,8 +82,14 @@ export default function DynamicGuestRoom() {
     try {
       const response = await auctionAPI.getCurrentRoundItem(roomId)
       if (response.success) {
-        setCurrentRoundItem(response.currentRoundItem)
-        console.log("[DynamicGuest] Current round item loaded:", response.currentRoundItem)
+        // roundStatus가 WAITING이면 물품 초기화
+        if (response.roundStatus === 'WAITING') {
+          setCurrentRoundItem(null)
+          console.log("[DynamicGuest] Round is WAITING, clearing current round item")
+        } else {
+          setCurrentRoundItem(response.currentRoundItem)
+          console.log("[DynamicGuest] Current round item loaded:", response.currentRoundItem)
+        }
       }
     } catch (error) {
       console.error("[DynamicGuest] Failed to load current round item:", error)
@@ -94,6 +100,7 @@ export default function DynamicGuestRoom() {
     if (storeCurrentRoundItem) setCurrentRoundItem(storeCurrentRoundItem)
   }, [storeCurrentRoundItem])
   const [currentHighestBid, setCurrentHighestBid] = useState<any>(null)
+  const [myCurrentBid, setMyCurrentBid] = useState<number>(0) // 현재 라운드에서 내가 입찰한 최고 금액
 
   // Supabase Realtime 구독 - 라운드 상태 변화 실시간 감지
   useAuctionRealtime(roomId, {
@@ -122,11 +129,16 @@ export default function DynamicGuestRoom() {
           })
           setCanBid(true)
           setRoundResults(null)
+          setMyCurrentBid(0) // 새 라운드 시작 시 내 입찰 금액 초기화
+          setCurrentHighestBid(null) // 새 라운드 시작 시 최고 입찰자 초기화
           loadCurrentRoundItem()
         } 
         // 라운드 종료 감지
         else if (room.round_status !== 'ACTIVE' && previousRoundStatus === 'ACTIVE') {
           console.log('[DynamicGuest Realtime] 라운드 종료 감지!')
+          setMyCurrentBid(0) // 라운드 종료 시 내 입찰 금액 초기화
+          setCurrentHighestBid(null) // 라운드 종료 시 최고 입찰자 초기화
+          setCurrentRoundItem(null) // 라운드 종료 시 경매 물품 초기화
           toast({
             title: "라운드 종료",
             description: `라운드 ${room.current_round}이 종료되었습니다.`,
@@ -135,6 +147,8 @@ export default function DynamicGuestRoom() {
         // 라운드 번호 변경 감지
         else if (room.current_round !== previousRound && room.current_round > previousRound) {
           console.log('[DynamicGuest Realtime] 라운드 변경 감지!')
+          setMyCurrentBid(0) // 새 라운드로 변경 시 내 입찰 금액 초기화
+          setCurrentHighestBid(null) // 새 라운드로 변경 시 최고 입찰자 초기화
           loadCurrentRoundItem()
         }
         
@@ -163,13 +177,37 @@ export default function DynamicGuestRoom() {
     onGuestLeave: (guest) => {
       console.log("[DynamicGuest Realtime] Guest left:", guest)
     },
+    onGuestUpdate: (guest) => {
+      console.log("[DynamicGuest Realtime] Guest updated:", guest)
+      // 현재 게스트의 정보가 업데이트되었을 때 (자본금 변경 등)
+      if (guestData && guest.nickname === guestData.nickname) {
+        setGuestData(prev => prev ? {
+          ...prev,
+          capital: guest.capital,
+          has_bid_in_current_round: guest.has_bid_in_current_round
+        } : null)
+        console.log("[DynamicGuest Realtime] My capital updated to:", guest.capital)
+        
+        toast({
+          title: "자본금 변경",
+          description: `자본금이 ${(guest.capital ?? 0).toLocaleString()}원으로 변경되었습니다.`,
+        })
+      }
+    },
     onBidPlaced: (bid) => {
       console.log("[DynamicGuest Realtime] Bid placed:", bid)
+      
+      // 최고 입찰자 업데이트 (Realtime)
+      if (!currentHighestBid || bid.amount > currentHighestBid.amount) {
+        setCurrentHighestBid(bid)
+        console.log("[DynamicGuest Realtime] New highest bid:", bid)
+      }
+      
       // 변동입찰에서는 다른 사람의 입찰 알림이 중요
       if (bid.nickname !== guestData?.nickname) {
         toast({
           title: "🚨 새로운 입찰!",
-          description: `${bid.nickname}님이 ${bid.amount.toLocaleString()}원에 입찰했습니다!`,
+          description: `${bid.nickname}님이 ${(bid.amount ?? 0).toLocaleString()}원에 입찰했습니다!`,
         })
       }
     },
@@ -203,33 +241,54 @@ export default function DynamicGuestRoom() {
           retryCount = 0 // Reset retry count on success
           consecutiveErrors = 0 // Reset consecutive error count
           
+          // response.room을 response.state로 정규화
+          const state = response.state || response.room
+          
+          if (!state) {
+            console.warn("[Dynamic Guest] No state data in response")
+            return
+          }
+          
           // If guest is already joined, update their data
-          if (guestData) {
-            const currentGuest = response.state.guests.find(g => g.nickname === guestData.nickname)
+          if (guestData && state.guests) {
+            const currentGuest = state.guests.find(g => g.nickname === guestData.nickname)
             console.log("[Dynamic Guest] Current guest found:", currentGuest)
             
             if (currentGuest) {
               const newGuestData = {
                 ...guestData,
                 capital: currentGuest.capital,
-                status: response.state.status,
-                currentRound: response.state.currentRound,
-                roundStatus: response.state.roundStatus,
-                hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
+                status: state.status,
+                currentRound: state.current_round || state.currentRound,
+                roundStatus: state.round_status || state.roundStatus,
+                hasBidInCurrentRound: currentGuest.has_bid_in_current_round || currentGuest.hasBidInCurrentRound
               }
               
               console.log("[Dynamic Guest] Updating guest data:", newGuestData)
               setGuestData(newGuestData)
 
-              // Update current highest bid
-              if (response.state.currentHighestBid) {
-                setCurrentHighestBid(response.state.currentHighestBid)
+              // 현재 라운드의 최고 입찰자 계산
+              const currentRound = state.current_round || state.currentRound
+              if (state.bids && currentRound) {
+                const currentRoundBids = state.bids.filter(
+                  (bid: any) => bid.round === currentRound
+                )
+                if (currentRoundBids.length > 0) {
+                  const highestBid = currentRoundBids.reduce((max: any, bid: any) => 
+                    bid.amount > max.amount ? bid : max
+                  )
+                  setCurrentHighestBid(highestBid)
+                  console.log("[Dynamic Guest] Current highest bid:", highestBid)
+                } else {
+                  setCurrentHighestBid(null)
+                }
               } else {
                 setCurrentHighestBid(null)
               }
               
-              // 변동입찰에서는 항상 입찰 가능 (라운드가 활성상태이고 자본이 있으면)
-              const dynamicCanBid = response.state.roundStatus === "ACTIVE" && currentGuest.capital > 0
+              // 변동입찰에서는 항상 입찰 가능 (라운드가 활성상태이고 자본이 있으면, hasBidInCurrentRound 무시)
+              const roundStatus = state.round_status || state.roundStatus
+              const dynamicCanBid = roundStatus === "ACTIVE" && currentGuest.capital > 0
               console.log("[Dynamic Guest] Dynamic bid - always setting canBid to:", dynamicCanBid)
               setCanBid(dynamicCanBid)
               
@@ -237,35 +296,36 @@ export default function DynamicGuestRoom() {
               loadCurrentRoundItem()
               
               console.log("[DynamicGuest] State updated:", {
-                status: response.state.status,
-                roundStatus: response.state.roundStatus,
-                currentRound: response.state.currentRound,
+                status: state.status,
+                roundStatus: state.round_status || state.roundStatus,
+                currentRound: state.current_round || state.currentRound,
                 canBid: dynamicCanBid,
                 capital: currentGuest.capital
               })
               
               // Check for state changes and show notifications
-              if (previousState) {
+              if (previousState && state) {
                 console.log("[Dynamic Guest] Previous state:", previousState)
-                console.log("[Dynamic Guest] Current state:", response.state)
+                console.log("[Dynamic Guest] Current state:", state)
 
-                // 변동입찰에서 자신의 입찰이 추월되었는지 확인
-                if (response.state.roundStatus === "ACTIVE") {
+                // 변동입찰에서 자신의 입찰이 추월되었는지 확인 (currentHighestBid는 이제 계산되어 저장됨)
+                const currentRoundStatus = state.round_status || state.roundStatus
+                if (currentRoundStatus === "ACTIVE") {
                   const previousMyBid = previousState.currentHighestBid?.nickname === guestData.nickname
-                  const currentMyBid = response.state.currentHighestBid?.nickname === guestData.nickname
+                  const currentMyBid = currentHighestBid?.nickname === guestData.nickname
                   
                   // 이전에는 최고 입찰자였는데 지금은 아닌 경우
-                  if (previousMyBid && !currentMyBid && response.state.currentHighestBid) {
+                  if (previousMyBid && !currentMyBid && currentHighestBid) {
                     toast({
                       title: "입찰이 추월되었습니다",
-                      description: `${response.state.currentHighestBid.nickname}님이 ${response.state.currentHighestBid.amount.toLocaleString()}원으로 입찰했습니다. 더 높은 금액으로 재입찰하세요!`,
+                      description: `${currentHighestBid.nickname}님이 ${(currentHighestBid.amount ?? 0).toLocaleString()}원으로 입찰했습니다. 더 높은 금액으로 재입찰하세요!`,
                       variant: "destructive",
                     })
                   }
                 }
                 
                 // Auction started
-                if (previousState.status === "PRE-START" && response.state.status === "ACTIVE") {
+                if (previousState?.status === "PRE-START" && state?.status === "ACTIVE") {
                   console.log("[Dynamic Guest] Auction started!")
                   toast({
                     title: "변동입찰 경매 시작",
@@ -274,22 +334,32 @@ export default function DynamicGuestRoom() {
                 }
                 
                 // Round started
-                if (previousState.currentRound < response.state.currentRound && response.state.roundStatus === "ACTIVE") {
+                const prevRound = previousState?.current_round || previousState?.currentRound || 0
+                const currRound = state?.current_round || state?.currentRound || 0
+                const currRoundStatus = state?.round_status || state?.roundStatus
+                if (prevRound < currRound && currRoundStatus === "ACTIVE") {
                   console.log("[Dynamic Guest] Round started!")
+                  setMyCurrentBid(0) // 새 라운드 시작 시 내 입찰 금액 초기화
+                  setCurrentHighestBid(null) // 새 라운드 시작 시 최고 입찰자 초기화
                   toast({
                     title: "라운드 시작",
-                    description: `라운드 ${response.state.currentRound}이 시작되었습니다! 변동입찰로 실시간 재입찰이 가능합니다.`,
+                    description: `라운드 ${currRound}이 시작되었습니다! 변동입찰로 실시간 재입찰이 가능합니다.`,
                   })
                   setRoundResults(null) // Clear previous round results
                 }
                 
                 // Round ended (ACTIVE -> NON-ACTIVE: WAITING/ENDED 모두 처리)
-                if (previousState.roundStatus === "ACTIVE" && response.state.roundStatus !== "ACTIVE") {
+                const prevRoundStatus = previousState?.round_status || previousState?.roundStatus
+                if (prevRoundStatus === "ACTIVE" && currRoundStatus !== "ACTIVE") {
                   console.log("[Dynamic Guest] Round ended!")
+                  setMyCurrentBid(0) // 라운드 종료 시 내 입찰 금액 초기화
+                  setCurrentHighestBid(null) // 라운드 종료 시 최고 입찰자 초기화
+                  setCurrentRoundItem(null) // 라운드 종료 시 경매 물품 초기화
+                  
                   // Get round results from the latest bids
-                  const roundBids = response.state.bids.filter((bid: any) => bid.round === response.state.currentRound)
+                  const roundBids = (state?.bids || []).filter((bid: any) => bid.round === currRound)
                   const roundResults = {
-                    round: response.state.currentRound,
+                    round: currRound,
                     bids: roundBids.sort((a: any, b: any) => b.amount - a.amount),
                     winner: roundBids.length > 0 ? roundBids.reduce((max: any, bid: any) => bid.amount > max.amount ? bid : max) : null
                   }
@@ -300,18 +370,18 @@ export default function DynamicGuestRoom() {
                   if (roundResults.winner) {
                     toast({
                       title: "라운드 종료",
-                      description: `라운드 ${response.state.currentRound} 종료! 최고 입찰자: ${roundResults.winner.nickname} (${roundResults.winner.amount?.toLocaleString()}원)`,
+                      description: `라운드 ${currRound} 종료! 최고 입찰자: ${roundResults.winner.nickname} (${roundResults.winner.amount?.toLocaleString()}원)`,
                     })
                   } else {
                     toast({
                       title: "라운드 종료",
-                      description: `라운드 ${response.state.currentRound} 종료! 입찰자가 없었습니다.`,
+                      description: `라운드 ${currRound} 종료! 입찰자가 없었습니다.`,
                     })
                   }
                 }
               }
               
-              previousState = response.state
+              previousState = state
             } else {
               console.log("[Dynamic Guest] Guest not found in room, might have been removed")
               // Guest was removed from room - but don't immediately disconnect
@@ -392,8 +462,9 @@ export default function DynamicGuestRoom() {
     try {
       const response = await auctionAPI.joinRoom(roomId, nickname.trim())
       if (response.success) {
-        console.log("[Dynamic Guest] Guest joined successfully:", response)
-        setGuestData(response)
+        const normalizedGuestData = response.guest || response; // Normalize response
+        console.log("[Dynamic Guest] Guest joined successfully:", normalizedGuestData)
+        setGuestData(normalizedGuestData)
         setCanBid(true) // 변동입찰에서는 기본적으로 입찰 가능
         setShowJoinModal(false)
         setIsJoining(false)
@@ -402,8 +473,8 @@ export default function DynamicGuestRoom() {
         setTimeout(async () => {
           try {
             const stateResponse = await auctionAPI.getState(roomId)
-            if (stateResponse.success) {
-              const currentGuest = stateResponse.state.guests.find(g => g.nickname === response.nickname)
+            if (stateResponse.success && stateResponse.state?.guests) {
+              const currentGuest = stateResponse.state.guests.find(g => g.nickname === normalizedGuestData.nickname)
               if (currentGuest) {
                 setGuestData(prev => prev ? {
                   ...prev,
@@ -413,7 +484,8 @@ export default function DynamicGuestRoom() {
                   roundStatus: stateResponse.state.roundStatus,
                   hasBidInCurrentRound: currentGuest.hasBidInCurrentRound
                 } : null)
-                setCanBid(!currentGuest.hasBidInCurrentRound)
+                // 변동입찰에서는 항상 입찰 가능 (hasBidInCurrentRound 무시)
+                setCanBid(stateResponse.state.roundStatus === "ACTIVE" && currentGuest.capital > 0)
               }
             }
           } catch (error) {
@@ -448,7 +520,7 @@ export default function DynamicGuestRoom() {
         
         toast({
           title: "참여 완료",
-          description: `${response.nickname}님으로 변동입찰 경매에 참여했습니다.`,
+          description: `${normalizedGuestData.nickname}님으로 변동입찰 경매에 참여했습니다.`,
         })
         
         // 현재 라운드 물품 정보 로드
@@ -503,20 +575,32 @@ export default function DynamicGuestRoom() {
       return
     }
 
-    if (amount > guestData.capital) {
+    // 변동입찰: 사용 가능 자본 = 현재 자본 + 내가 이번 라운드에 입찰한 금액 (환원됨)
+    const availableCapital = guestData.capital + myCurrentBid
+    console.log("[Dynamic Guest] Available capital check:", {
+      currentCapital: guestData.capital,
+      myCurrentBid,
+      availableCapital,
+      bidAmount: amount
+    })
+    
+    if (amount > availableCapital) {
       toast({
         title: "입찰 불가",
-        description: "보유 자본보다 많은 금액을 입찰할 수 없습니다.",
+        description: `사용 가능한 자본이 부족합니다. (사용 가능: ${availableCapital.toLocaleString()}원)`,
         variant: "destructive",
       })
       return
     }
 
-    // 변동입찰에서는 현재 최고 입찰가보다 높아야 함
+    // 변동입찰에서는 현재 최고 입찰가보다 높아야 함 (자신의 입찰도 포함)
     if (currentHighestBid && amount <= currentHighestBid.amount) {
+      const isSelfBid = currentHighestBid.nickname === guestData.nickname
       toast({
         title: "입찰 불가",
-        description: `현재 최고 입찰가(${currentHighestBid.amount.toLocaleString()}원)보다 높은 금액을 입찰해야 합니다.`,
+        description: isSelfBid 
+          ? `현재 최고 입찰자는 본인입니다. 더 높은 금액(${((currentHighestBid.amount ?? 0) + 1).toLocaleString()}원 이상)으로 재입찰해야 합니다.`
+          : `현재 최고 입찰가(${(currentHighestBid.amount ?? 0).toLocaleString()}원)보다 높은 금액을 입찰해야 합니다.`,
         variant: "destructive",
       })
       return
@@ -530,13 +614,25 @@ export default function DynamicGuestRoom() {
       console.log("[Dynamic Guest] Bid response:", response)
       
       if (response.success) {
+        // 내 현재 입찰 금액 업데이트 (재입찰 시 환원 계산용)
+        setMyCurrentBid(amount)
+        
         // 최고 입찰 정보 먼저 업데이트 (실시간 반영)
-        if (response.state?.currentHighestBid) {
-          setCurrentHighestBid(response.state.currentHighestBid)
+        if (response.state?.bids && response.state?.currentRound) {
+          const currentRoundBids = response.state.bids.filter(
+            (bid: any) => bid.round === response.state.currentRound
+          )
+          if (currentRoundBids.length > 0) {
+            const highestBid = currentRoundBids.reduce((max: any, bid: any) => 
+              bid.amount > max.amount ? bid : max
+            )
+            setCurrentHighestBid(highestBid)
+            console.log("[Dynamic Guest] Updated highest bid after placing bid:", highestBid)
+          }
         }
 
         // Update guest data immediately with full state
-        if (response.state) {
+        if (response.state?.guests) {
           const currentGuest = response.state.guests.find(g => g.nickname === guestData.nickname)
           if (currentGuest) {
             setGuestData((prev) => (prev ? { 
@@ -677,7 +773,7 @@ export default function DynamicGuestRoom() {
       </Dialog>
 
       {guestData && (
-        <AuctionItemProvider roomId={roomId}>
+        <AuctionItemProvider roomId={roomId} guestName={guestData.nickname}>
           <GuestLayout roomId={roomId} guestName={guestData.nickname}>
             <div className="max-w-4xl mx-auto space-y-6">
           {/* Header */}
@@ -706,7 +802,7 @@ export default function DynamicGuestRoom() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary">
-                    {guestData.capital.toLocaleString()}원
+                    {(guestData.capital ?? 0).toLocaleString()}원
                   </div>
                   <div className="text-sm text-muted-foreground">보유 자본</div>
                 </div>
@@ -746,7 +842,7 @@ export default function DynamicGuestRoom() {
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold text-emerald-600">
-                        {currentHighestBid.amount.toLocaleString()}원
+                        {(currentHighestBid.amount ?? 0).toLocaleString()}원
                       </p>
                       <p className="text-sm text-muted-foreground">입찰 금액</p>
                     </div>
@@ -766,6 +862,81 @@ export default function DynamicGuestRoom() {
                 )}
               </CardContent>
             </Card>
+          )}
+
+          {/* Bidding Section */}
+          {guestData.status === "ACTIVE" && guestData.roundStatus === "ACTIVE" ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  변동입찰하기 (실시간 재입찰 가능)
+                </CardTitle>
+                <CardDescription>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    라운드 {guestData.currentRound}이 진행 중입니다
+                    <Badge variant="outline">
+                      {guestData.roundStatus === "ACTIVE" ? "실시간 입찰 가능" : "입찰 불가"}
+                    </Badge>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bid-amount">입찰 금액</Label>
+                    <Input
+                      id="bid-amount"
+                      type="number"
+                      placeholder={currentHighestBid ? `${((currentHighestBid.amount ?? 0) + 1).toLocaleString()}원 이상 입력` : "입찰할 금액을 입력하세요"}
+                      value={bidAmount}
+                      onChange={(e) => setBidAmount(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handlePlaceBid()}
+                      min={currentHighestBid ? (currentHighestBid.amount ?? 0) + 1 : 1}
+                      max={guestData.capital ?? 0}
+                    />
+                  </div>
+                  <Button
+                    onClick={handlePlaceBid}
+                    className="w-full"
+                    size="lg"
+                    disabled={
+                      isBidding || 
+                      guestData.capital <= 0 || 
+                      guestData.roundStatus !== "ACTIVE"
+                    }
+                  >
+                    {isBidding ? "입찰 중..." : 
+                     guestData.capital <= 0 ? "자본금 부족" : 
+                     guestData.roundStatus !== "ACTIVE" ? "라운드 대기 중" : 
+                     (currentHighestBid?.nickname === guestData.nickname ? "더 높은 금액으로 재입찰" : "입찰하기")}
+                  </Button>
+                  {guestData.capital <= 0 && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>자본금이 모두 소진되었습니다. 더 이상 입찰할 수 없습니다.</AlertDescription>
+                    </Alert>
+                  )}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          ) : guestData.status === "ACTIVE" ? (
+            <Alert>
+              <Clock className="h-4 w-4" />
+              <AlertDescription>
+                변동입찰 경매가 시작되었습니다. 호스트가 라운드를 시작하면 입찰할 수 있습니다.
+                {guestData.currentRound && guestData.currentRound > 0 && (
+                  <span className="block mt-2 text-sm">
+                    현재 라운드: {guestData.currentRound} | 
+                    상태: {guestData.roundStatus === "ACTIVE" ? "진행 중" : "대기 중"}
+                  </span>
+                )}
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert>
+              <Clock className="h-4 w-4" />
+              <AlertDescription>
+                변동입찰 경매가 아직 시작되지 않았습니다. 호스트가 경매를 시작할 때까지 기다려주세요.
+              </AlertDescription>
+            </Alert>
           )}
 
           {/* Current Round Item (click to enlarge) */}
@@ -791,7 +962,7 @@ export default function DynamicGuestRoom() {
                           <div className="mt-2">
                             <span className="text-sm text-muted-foreground">시작가: </span>
                             <span className="font-semibold text-primary">
-                              {currentRoundItem.item.startingPrice.toLocaleString()}원
+                              {(currentRoundItem.item.startingPrice ?? 0).toLocaleString()}원
                             </span>
                           </div>
                         )}
@@ -846,81 +1017,6 @@ export default function DynamicGuestRoom() {
             </DialogContent>
           </Dialog>
 
-          {/* Bidding Section */}
-          {guestData.status === "ACTIVE" && guestData.roundStatus === "ACTIVE" ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
-                  변동입찰하기 (실시간 재입찰 가능)
-                </CardTitle>
-                <CardDescription>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    라운드 {guestData.currentRound}이 진행 중입니다
-                    <Badge variant="outline">
-                      {guestData.roundStatus === "ACTIVE" ? "실시간 입찰 가능" : "입찰 불가"}
-                    </Badge>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="bid-amount">입찰 금액</Label>
-                    <Input
-                      id="bid-amount"
-                      type="number"
-                      placeholder={currentHighestBid ? `${(currentHighestBid.amount + 1).toLocaleString()}원 이상 입력` : "입찰할 금액을 입력하세요"}
-                      value={bidAmount}
-                      onChange={(e) => setBidAmount(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handlePlaceBid()}
-                      min={currentHighestBid ? currentHighestBid.amount + 1 : 1}
-                      max={guestData.capital}
-                    />
-                  </div>
-                  <Button
-                    onClick={handlePlaceBid}
-                    className="w-full"
-                    size="lg"
-                    disabled={
-                      isBidding || 
-                      guestData.capital <= 0 || 
-                      guestData.roundStatus !== "ACTIVE"
-                    }
-                  >
-                    {isBidding ? "입찰 중..." : 
-                     guestData.capital <= 0 ? "자본금 부족" : 
-                     guestData.roundStatus !== "ACTIVE" ? "라운드 대기 중" : 
-                     (currentHighestBid?.nickname === guestData.nickname ? "더 높은 금액으로 재입찰" : "입찰하기")}
-                  </Button>
-                  {guestData.capital <= 0 && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>자본금이 모두 소진되었습니다. 더 이상 입찰할 수 없습니다.</AlertDescription>
-                    </Alert>
-                  )}
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          ) : guestData.status === "ACTIVE" ? (
-            <Alert>
-              <Clock className="h-4 w-4" />
-              <AlertDescription>
-                변동입찰 경매가 시작되었습니다. 호스트가 라운드를 시작하면 입찰할 수 있습니다.
-                {guestData.currentRound && guestData.currentRound > 0 && (
-                  <span className="block mt-2 text-sm">
-                    현재 라운드: {guestData.currentRound} | 
-                    상태: {guestData.roundStatus === "ACTIVE" ? "진행 중" : "대기 중"}
-                  </span>
-                )}
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <Alert>
-              <Clock className="h-4 w-4" />
-              <AlertDescription>
-                변동입찰 경매가 아직 시작되지 않았습니다. 호스트가 경매를 시작할 때까지 기다려주세요.
-              </AlertDescription>
-            </Alert>
-          )}
-
           {/* Round Results */}
           {roundResults && (
             <Card>
@@ -954,7 +1050,7 @@ export default function DynamicGuestRoom() {
                   <div className="space-y-2">
                     <h4 className="font-semibold text-lg">전체 입찰 내역 (금액 공개)</h4>
                     {roundResults.bids.map((bid, index) => (
-                      <Alert key={`${bid.nickname}-${bid.timestamp}-${index}`} className="py-3">
+                      <Alert key={`${bid.nickname}-${bid.timestamp || bid.created_at || index}`} className="py-3">
                         <AlertDescription className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-lg">{bid.nickname}</span>
@@ -963,9 +1059,9 @@ export default function DynamicGuestRoom() {
                             {index === 2 && <Badge variant="outline">3위</Badge>}
                           </div>
                           <div className="text-right">
-                            <div className="font-mono font-bold text-lg">{bid.amount?.toLocaleString()}원</div>
+                            <div className="font-mono font-bold text-lg">{(bid.amount ?? 0).toLocaleString()}원</div>
                             <div className="text-xs text-muted-foreground">
-                              {new Date(bid.timestamp).toLocaleTimeString()}
+                              {bid.timestamp || bid.created_at ? new Date(bid.timestamp || bid.created_at).toLocaleTimeString() : '-'}
                             </div>
                           </div>
                         </AlertDescription>

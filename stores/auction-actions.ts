@@ -13,6 +13,7 @@ export interface AuctionActions {
   updateGuest: (nickname: string, updates: Partial<Guest>) => void
   removeGuest: (nickname: string) => void
   setCurrentGuest: (guest: Guest | null) => void
+  modifyCapital: (nickname: string, newCapital: number) => Promise<void>
   
   // 아이템 관리
   setItems: (items: AuctionItem[]) => void
@@ -135,6 +136,38 @@ export const createAuctionActions = (
         currentGuest: guest,
         lastUpdated: new Date(),
       }), false, 'setCurrentGuest')
+    },
+    
+    modifyCapital: async (nickname: string, newCapital: number) => {
+      const state = getState()
+      const actions = createAuctionActions(setState, getState)
+      
+      if (!state.room) {
+        throw new Error('Room not found')
+      }
+      
+      actions.setLoading(true)
+      actions.setError(null)
+      
+      try {
+        const { auctionAPI } = await import('@/lib/api')
+        const response = await auctionAPI.modifyCapital(state.room.id, nickname, newCapital)
+        
+        if (!response.success) {
+          throw new Error(response.error || 'Failed to modify capital')
+        }
+        
+        // 로컬 상태 업데이트
+        actions.updateGuest(nickname, { capital: newCapital })
+        
+        // 서버 상태 동기화
+        await actions.syncWithServer(state.room.id)
+      } catch (error) {
+        actions.setError(error instanceof Error ? error.message : 'Unknown error')
+        throw error
+      } finally {
+        actions.setLoading(false)
+      }
     },
     
     // 아이템 관리
@@ -342,7 +375,7 @@ export const createAuctionActions = (
       
       try {
         const { auctionAPI } = await import('@/lib/api')
-        const response = await auctionAPI.endRound(state.room.id)
+        const response = await auctionAPI.endRound(state.room.id, state.auctionType)
         
         if (!response.success) {
           throw new Error(response.error || 'Failed to end round')

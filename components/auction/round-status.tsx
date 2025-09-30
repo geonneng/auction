@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Clock, Package, TrendingUp, Users } from 'lucide-react'
 
 interface RoundStatusProps {
@@ -24,6 +25,7 @@ export function RoundStatus({ auctionType = 'fixed' }: RoundStatusProps) {
   const setCurrentRoundItem = useSetCurrentRoundItem()
   const [selectedItemKey, setSelectedItemKey] = React.useState<string | null>(null)
   const [isRegistering, setIsRegistering] = React.useState(false)
+  const [showItemSelectDialog, setShowItemSelectDialog] = React.useState(false)
   
   if (!room) return null
   // WAITING 상태에서 방의 아이템 목록 로드 (게스트 등록물 동기화)
@@ -100,6 +102,7 @@ export function RoundStatus({ auctionType = 'fixed' }: RoundStatusProps) {
     guest.has_bid_in_current_round || guest.hasBidInCurrentRound
   ).length
 
+  // 고정입찰에서만 ACTIVE 상태일 때 금액 비공개 (변동입찰은 항상 공개)
   const hideAmounts = auctionType === 'fixed' && room.round_status === 'ACTIVE'
   
   const getRoundStatusInfo = () => {
@@ -190,12 +193,24 @@ export function RoundStatus({ auctionType = 'fixed' }: RoundStatusProps) {
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-            <Package className="h-6 w-6 text-gray-400" />
-            <div>
-              <p className="text-gray-600">등록된 아이템이 없습니다</p>
-              <p className="text-sm text-gray-500"></p>
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-4">
+              <Package className="h-6 w-6 text-gray-400" />
+              <div>
+                <p className="text-gray-600">등록된 아이템이 없습니다</p>
+              </div>
             </div>
+            {room.round_status === 'WAITING' && (
+              <Button
+                onClick={() => {
+                  loadAuctionItems(room.id)
+                  setShowItemSelectDialog(true)
+                }}
+                size="sm"
+              >
+                등록하기
+              </Button>
+            )}
           </div>
         )}
         
@@ -249,35 +264,32 @@ export function RoundStatus({ auctionType = 'fixed' }: RoundStatusProps) {
           </div>
         )}
         
-        {/* 입찰 내역 (최근 5개) */}
-        {currentRoundBids.length > 0 && (
+        {/* 입찰 내역 - 고정입찰 ACTIVE는 순위만, 변동입찰이나 WAITING에서는 금액 공개 */}
+        {currentRoundBids.length > 0 && room.round_status === 'ACTIVE' && (
           <div className="space-y-3">
             <h4 className="font-medium text-gray-900 flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
-              최근 입찰 내역
+              {hideAmounts ? '현재 입찰 순위 (금액 비공개)' : '현재 입찰 순위'}
             </h4>
-            <div className="space-y-2 max-h-32 overflow-y-auto">
-              {(hideAmounts ? [] : currentRoundBids)
-                .sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime())
-                .slice(0, 5)
+            <div className="space-y-2 max-h-40 overflow-y-auto">
+              {currentRoundBids
+                .slice()
+                .sort((a, b) => b.amount - a.amount)
                 .map((bid, index) => (
                   <div key={bid.id || index} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded">
-                    <span className="text-sm font-medium">
-                      {bid.nickname}
-                    </span>
-                    <span className="text-sm text-blue-600 font-semibold">
-                      {bid.amount.toLocaleString()}원
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs px-2 py-0.5 rounded bg-blue-600 text-white font-semibold">{index + 1}위</span>
+                      <span className="text-sm font-medium">{bid.nickname}</span>
+                    </div>
+                    {hideAmounts ? (
+                      <span className="text-sm text-gray-500">입찰 완료</span>
+                    ) : (
+                      <span className="text-sm text-blue-600 font-semibold">{bid.amount.toLocaleString()}원</span>
+                    )}
                   </div>
                 ))
               }
             </div>
-            
-            {currentRoundBids.length > 5 && (
-              <p className="text-xs text-gray-500 text-center">
-                총 {currentRoundBids.length}건의 입찰이 있습니다
-              </p>
-            )}
           </div>
         )}
 
@@ -317,37 +329,64 @@ export function RoundStatus({ auctionType = 'fixed' }: RoundStatusProps) {
             {statusInfo.description}
           </p>
         </div>
+      </CardContent>
 
-        {/* 라운드 대기: 호스트가 물품 지정 - 팝업 방식 */}
-        {room.round_status === 'WAITING' && (
-          <div className="mt-4 p-4 rounded border bg-blue-50 border-blue-200">
-            <h4 className="font-medium mb-2 text-blue-900">새 라운드 물품 등록</h4>
-            <p className="text-sm text-blue-700 mb-3">이전 라운드가 종료되었습니다. 새 라운드를 위한 물품을 선택해주세요.</p>
+      {/* 물품 선택 다이얼로그 */}
+      <Dialog open={showItemSelectDialog} onOpenChange={setShowItemSelectDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>경매 물품 선택</DialogTitle>
+            <DialogDescription>
+              새 라운드에 등록할 물품을 선택해주세요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 max-h-96 overflow-y-auto">
             {availableItems.length === 0 ? (
-              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
-                <p className="text-sm text-yellow-800">
-                  등록된 물품이 없습니다. 게스트 페이지에서 물품을 등록해 주세요.
-                </p>
+              <div className="text-center py-8 text-gray-500">
+                <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">등록된 물품이 없습니다</p>
+                <p className="text-xs mt-1">게스트 페이지에서 물품을 등록해 주세요.</p>
               </div>
             ) : (
-              <Button 
-                onClick={() => {
-                  // 팝업으로 물품 선택
-                  const selectedItem = availableItems[0] // 첫 번째 아이템을 기본 선택
-                  if (selectedItem) {
-                    setSelectedItemKey(selectedItem.guest)
-                    handleRegisterItem()
-                  }
-                }}
-                className="w-full"
-                disabled={isRegistering}
-              >
-                {isRegistering ? '등록 중...' : '물품 선택하여 라운드 시작'}
-              </Button>
+              availableItems.map(({ guest, item }) => (
+                <Button
+                  key={guest}
+                  onClick={async () => {
+                    setSelectedItemKey(guest)
+                    await handleRegisterItem()
+                    setShowItemSelectDialog(false)
+                  }}
+                  variant="outline"
+                  className="w-full h-auto py-4 px-4 justify-start text-left"
+                  disabled={isRegistering}
+                >
+                  <div className="flex items-start gap-3 w-full">
+                    {item.image && (
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-16 h-16 object-cover rounded border"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-gray-900 truncate">{item.name}</h4>
+                      {item.description && (
+                        <p className="text-sm text-gray-600 line-clamp-2 mt-1">{item.description}</p>
+                      )}
+                      {item.starting_price && (
+                        <p className="text-sm text-blue-600 mt-1 font-medium">
+                          시작가: {item.starting_price.toLocaleString()}원
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-500 mt-1">등록자: {guest}</p>
+                    </div>
+                  </div>
+                </Button>
+              ))
             )}
           </div>
-        )}
-      </CardContent>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }

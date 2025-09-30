@@ -29,12 +29,12 @@ export class AuctionAPI {
       try {
         console.log(`[API] Making request to ${url}, attempt ${i + 1}/${maxRetries}`)
         
-        // AbortController로 타임아웃 설정 (5초)
+        // AbortController로 타임아웃 설정 (10초로 증가)
         const controller = new AbortController()
         const timeoutId = setTimeout(() => {
-          console.log(`[API] Request timeout after 5 seconds`)
+          console.log(`[API] Request timeout after 10 seconds`)
           controller.abort()
-        }, 5000) // 5초 타임아웃
+        }, 10000) // 10초 타임아웃
         
         const response = await fetch(url, {
           ...options,
@@ -85,7 +85,9 @@ export class AuctionAPI {
         if (i === maxRetries - 1 || this.isNonRetryableError(error)) {
           // AbortError인 경우 더 친화적인 에러 메시지 제공
           if (error.name === 'AbortError') {
-            throw new Error('요청 시간이 초과되었습니다. 네트워크 연결을 확인해주세요.')
+            console.warn('[API] Request timed out, but continuing...')
+            // AbortError는 재시도할 가치가 있으므로 에러를 던지지 않고 빈 응답 반환
+            return { success: false, error: 'Request timeout - retrying...', timeout: true }
           }
           throw error
         }
@@ -158,12 +160,13 @@ export class AuctionAPI {
     })
   }
 
-  async endRound(roomId: string) {
+  async endRound(roomId: string, auctionType?: 'fixed' | 'dynamic') {
     return this.makeRequest(this.baseUrl, {
       method: 'POST',
       body: JSON.stringify({
         action: 'endRound',
-        roomId
+        roomId,
+        auctionType
       })
     })
   }

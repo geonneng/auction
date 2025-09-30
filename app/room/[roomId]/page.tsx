@@ -53,9 +53,18 @@ export default function GuestRoom() {
       const response = await auctionAPI.getCurrentRoundItem(roomId)
       console.log('[Guest] API response:', response)
       
-      if (response.success && response.currentRoundItem) {
-        console.log('[Guest] Current round item loaded:', response.currentRoundItem)
-        setCurrentRoundItem(response.currentRoundItem)
+      if (response.success) {
+        // roundStatus가 WAITING이면 물품 초기화
+        if (response.roundStatus === 'WAITING') {
+          setCurrentRoundItem(null)
+          console.log('[Guest] Round is WAITING, clearing current round item')
+        } else if (response.currentRoundItem) {
+          console.log('[Guest] Current round item loaded:', response.currentRoundItem)
+          setCurrentRoundItem(response.currentRoundItem)
+        } else {
+          console.log('[Guest] No current round item found')
+          setCurrentRoundItem(null)
+        }
       } else {
         console.log('[Guest] No current round item found')
         setCurrentRoundItem(null)
@@ -186,11 +195,28 @@ export default function GuestRoom() {
       console.log("[Guest] Guest left via Realtime:", guest)
       setShouldRefresh(prev => prev + 1)
     },
+    onGuestUpdate: (guest) => {
+      console.log("[Guest] Guest updated via Realtime:", guest)
+      // 현재 게스트의 정보가 업데이트되었을 때 (자본금 변경 등)
+      if (guestData && guest.nickname === guestData.nickname) {
+        setGuestData(prev => prev ? {
+          ...prev,
+          capital: guest.capital,
+          has_bid_in_current_round: guest.has_bid_in_current_round
+        } : null)
+        console.log("[Guest Realtime] My capital updated to:", guest.capital)
+        
+        toast({
+          title: "자본금 변경",
+          description: `자본금이 ${(guest.capital ?? 0).toLocaleString()}원으로 변경되었습니다.`,
+        })
+      }
+    },
     onBidPlaced: (bid) => {
       console.log("[Guest] Bid placed via Realtime:", bid)
       toast({
         title: "새 입찰",
-        description: `${bid.nickname}님이 ${bid.amount.toLocaleString()}원에 입찰했습니다.`,
+        description: `${bid.nickname}님이 ${(bid.amount ?? 0).toLocaleString()}원에 입찰했습니다.`,
       })
       setShouldRefresh(prev => prev + 1)
     },
@@ -504,6 +530,53 @@ export default function GuestRoom() {
             </CardContent>
           </Card>
 
+          {/* 입찰 섹션 - 항상 표시 */}
+          {guestData.status === "ACTIVE" && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5" />
+                  입찰하기
+                </CardTitle>
+                <CardDescription>
+                  {guestData.roundStatus === "ACTIVE" ? 
+                    (canBid ? "입찰 금액을 입력하고 입찰하세요." : "이미 이번 라운드에 입찰했습니다.") :
+                    "라운드가 시작되면 입찰할 수 있습니다."
+                  }
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="bidAmount">입찰 금액</Label>
+                  <Input
+                    id="bidAmount"
+                    type="number"
+                    placeholder="입찰 금액 입력"
+                    value={bidAmount}
+                    onChange={(e) => setBidAmount(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && !isBidDisabled && handlePlaceBid()}
+                    disabled={isBidDisabled}
+                  />
+                </div>
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+                <Button 
+                  onClick={handlePlaceBid}
+                  className="w-full"
+                  disabled={isBidDisabled}
+                >
+                  {isBidding ? "입찰 중..." : 
+                   !canBid ? "입찰 완료" :
+                   guestData.roundStatus !== "ACTIVE" ? "라운드 대기 중" : "입찰하기"}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {/* 현재 경매 물품 */}
           {guestData.status === "ACTIVE" && (
             <Card onClick={() => currentRoundItem && setIsItemDialogOpen(true)} className="cursor-pointer hover:shadow-lg transition-shadow">
@@ -568,54 +641,6 @@ export default function GuestRoom() {
               )}
             </DialogContent>
           </Dialog>
-
-          {/* 입찰 섹션 - 항상 표시 */}
-          {guestData.status === "ACTIVE" && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5" />
-                  입찰하기
-                </CardTitle>
-                <CardDescription>
-                  {guestData.roundStatus === "ACTIVE" ? 
-                    (canBid ? "입찰 금액을 입력하고 입찰하세요." : "이미 이번 라운드에 입찰했습니다.") :
-                    "라운드가 시작되면 입찰할 수 있습니다."
-                  }
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="bidAmount">입찰 금액</Label>
-                  <Input
-                    id="bidAmount"
-                    type="number"
-                    placeholder="입찰 금액 입력"
-                    value={bidAmount}
-                    onChange={(e) => setBidAmount(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && !isBidDisabled && handlePlaceBid()}
-                    disabled={isBidDisabled}
-                  />
-                </div>
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-                <Button 
-                  onClick={handlePlaceBid}
-                  className="w-full"
-                  disabled={isBidDisabled}
-                >
-                  {isBidding ? "입찰 중..." : 
-                   !canBid ? "입찰 완료" :
-                   guestData.roundStatus !== "ACTIVE" ? "라운드 대기 중" : "입찰하기"}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
 
           {/* 라운드 결과 */}
           {roundResults && (

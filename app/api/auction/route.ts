@@ -281,10 +281,27 @@ export async function POST(request: NextRequest) {
         const effectiveRound = (roomRow?.current_round ?? round ?? 1)
         const isDynamicAuction = auctionType === 'dynamic'
         
-        // 변동입찰: 현재 라운드의 이전 입찰 금액 찾기 (환원용)
+        // 변동입찰: 현재 라운드의 최고 입찰자 찾기 (환원용)
+        let currentHighestBid = null
         let previousBidAmount = 0
+        
         if (isDynamicAuction) {
-          const { data: previousBids } = await supabaseAdmin
+          // 현재 라운드의 모든 입찰 중 최고 입찰 찾기
+          const { data: allRoundBids } = await supabaseAdmin
+            .from('bids')
+            .select('*, guest_id')
+            .eq('room_id', roomId)
+            .eq('round', effectiveRound)
+            .order('amount', { ascending: false })
+            .limit(1)
+          
+          if (allRoundBids && allRoundBids.length > 0) {
+            currentHighestBid = allRoundBids[0]
+            console.log(`[Dynamic Auction] Current highest bid: ${currentHighestBid.amount} by ${currentHighestBid.nickname}`)
+          }
+          
+          // 현재 입찰자의 이전 입찰 금액 찾기 (자신의 재입찰 환원용)
+          const { data: myPreviousBids } = await supabaseAdmin
             .from('bids')
             .select('amount')
             .eq('room_id', roomId)
@@ -293,9 +310,9 @@ export async function POST(request: NextRequest) {
             .order('created_at', { ascending: false })
             .limit(1)
           
-          if (previousBids && previousBids.length > 0) {
-            previousBidAmount = previousBids[0].amount
-            console.log(`[Dynamic Auction] Found previous bid: ${previousBidAmount}, will refund`)
+          if (myPreviousBids && myPreviousBids.length > 0) {
+            previousBidAmount = myPreviousBids[0].amount
+            console.log(`[Dynamic Auction] Found my previous bid: ${previousBidAmount}, will refund to self`)
           }
         }
 
@@ -310,6 +327,27 @@ export async function POST(request: NextRequest) {
           }, { status: 400 })
         }
 
+        // 변동입찰: 이전 최고 입찰자에게 금액 환원 (새 입찰자가 다른 사람일 때)
+        if (isDynamicAuction && currentHighestBid && currentHighestBid.guest_id !== guest.id) {
+          // 이전 최고 입찰자 정보 가져오기
+          const { data: previousHighestBidder, error: prevGuestError } = await supabaseAdmin
+            .from('guests')
+            .select('capital, nickname')
+            .eq('id', currentHighestBid.guest_id)
+            .single()
+          
+          if (!prevGuestError && previousHighestBidder) {
+            // 이전 최고 입찰자에게 입찰 금액 환원
+            const refundedCapital = previousHighestBidder.capital + currentHighestBid.amount
+            await supabaseAdmin
+              .from('guests')
+              .update({ capital: refundedCapital })
+              .eq('id', currentHighestBid.guest_id)
+            
+            console.log(`[Dynamic Auction] Refunded ${currentHighestBid.amount} to previous highest bidder ${previousHighestBidder.nickname}, new capital: ${refundedCapital}`)
+          }
+        }
+        
         // 입찰 추가
         const { data: newBid, error: bidError } = await supabaseAdmin
           .from('bids')
@@ -329,18 +367,24 @@ export async function POST(request: NextRequest) {
         }
 
         // 게스트 자본 업데이트
-        // 변동입찰: 이전 입찰 환원 + 새 입찰 차감 = 순 차감은 (새 입찰 - 이전 입찰)
+        // 변동입찰: 자신의 이전 입찰 환원 + 새 입찰 차감 = 순 차감은 (새 입찰 - 자신의 이전 입찰)
         // 고정입찰: 그냥 차감
         const updatedCapital = isDynamicAuction 
           ? guest.capital + previousBidAmount - bidAmount
           : guest.capital - bidAmount
         
+        // 변동입찰에서는 has_bid_in_current_round를 true로 설정하지 않음 (여러 번 입찰 가능)
+        const updateData: any = {
+          capital: updatedCapital
+        }
+        
+        if (!isDynamicAuction) {
+          updateData.has_bid_in_current_round = true
+        }
+        
         await supabaseAdmin
           .from('guests')
-          .update({
-            capital: updatedCapital,
-            has_bid_in_current_round: true
-          })
+          .update(updateData)
           .eq('id', guest.id)
         
         console.log(`[Auction] Bid placed - Type: ${auctionType}, Previous: ${previousBidAmount}, New: ${bidAmount}, Capital: ${guest.capital} -> ${updatedCapital}`)
@@ -385,20 +429,69 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ success: false, error: "Room ID is required" }, { status: 400 })
         }
         
-        // 라운드 종료
-        const { data: endRoom, error: endError } = await supabaseAdmin
-          .from('auction_rooms')
-          // 다음 라운드를 바로 시작할 수 있도록 WAITING 상태로 전환하고 현재 아이템 초기화
-          .update({ round_status: 'WAITING', current_item: null })
-          .eq('id', roomId)
-          .select()
-          .single()
+        {
+          // 현재 라운드 정보 가져오기
+          const { data: roomData, error: roomFetchError } = await supabaseAdmin
+            .from('auction_rooms')
+            .select('current_round')
+            .eq('id', roomId)
+            .single()
+          
+          if (roomFetchError) {
+            return NextResponse.json({ success: false, error: "Failed to fetch room" }, { status: 500 })
+          }
+          
+          const currentRound = roomData.current_round
+          
+          // 현재 라운드의 모든 입찰 가져오기 (낙찰자 확인용)
+          const { data: roundBids, error: bidsError } = await supabaseAdmin
+            .from('bids')
+            .select('*')
+            .eq('room_id', roomId)
+            .eq('round', currentRound)
+            .order('amount', { ascending: false })
+          
+          if (bidsError) {
+            console.error('[endRound] Failed to fetch bids:', bidsError)
+          }
+          
+          // 최고 입찰자 찾기 (낙찰자)
+          const winningBid = roundBids && roundBids.length > 0 ? roundBids[0] : null
+          console.log('[endRound] Winning bid:', winningBid)
+          
+          // 변동입찰에서는 입찰 시 즉시 환원하므로 라운드 종료 시 환원 불필요
+          // 고정입찰에서는 낙찰자가 아닌 사람들도 입찰 금액이 차감된 상태로 유지됨
+          
+          // 모든 게스트의 has_bid_in_current_round를 false로 초기화
+          await supabaseAdmin
+            .from('guests')
+            .update({ has_bid_in_current_round: false })
+            .eq('room_id', roomId)
+          
+          console.log('[endRound] Reset has_bid_in_current_round for all guests')
+          
+          // 라운드 종료
+          const { data: endRoom, error: endError } = await supabaseAdmin
+            .from('auction_rooms')
+            // 다음 라운드를 바로 시작할 수 있도록 WAITING 상태로 전환하고 현재 아이템 초기화
+            .update({ round_status: 'WAITING', current_item: null })
+            .eq('id', roomId)
+            .select()
+            .single()
 
-        if (endError) {
-          return NextResponse.json({ success: false, error: "Failed to end round" }, { status: 500 })
+          if (endError) {
+            return NextResponse.json({ success: false, error: "Failed to end round" }, { status: 500 })
+          }
+
+          return NextResponse.json({ 
+            success: true, 
+            room: endRoom,
+            winningBid: winningBid ? {
+              nickname: winningBid.nickname,
+              amount: winningBid.amount
+            } : null
+          })
         }
-
-        return NextResponse.json({ success: true, room: endRoom })
 
       case 'startAuction':
         if (!roomId) {

@@ -53,9 +53,11 @@ export function HostDashboard({ roomId, auctionType }: HostDashboardProps) {
   const [showFinalResults, setShowFinalResults] = useState(false)
   useEffect(() => {
     if (typeof window !== 'undefined' && roomId) {
-      setInviteUrl(`${window.location.origin}/room/${roomId}`)
+      // 경매 타입에 따라 다른 게스트 페이지 링크 생성
+      const guestPath = auctionType === 'dynamic' ? 'room-dynamic' : 'room'
+      setInviteUrl(`${window.location.origin}/${guestPath}/${roomId}`)
     }
-  }, [roomId])
+  }, [roomId, auctionType])
 
   const handleCopy = useCallback(() => {
     if (!inviteUrl) return
@@ -238,6 +240,7 @@ export function HostDashboard({ roomId, auctionType }: HostDashboardProps) {
         room={room}
         guests={guests}
         allBids={allBids}
+        auctionType={auctionType}
       />
     </div>
     </AuctionItemProvider>

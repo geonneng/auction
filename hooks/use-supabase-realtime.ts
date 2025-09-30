@@ -90,6 +90,7 @@ export function useAuctionRealtime(roomId: string, callbacks: {
   onRoomUpdate?: (room: any) => void
   onGuestJoin?: (guest: any) => void
   onGuestLeave?: (guest: any) => void
+  onGuestUpdate?: (guest: any) => void
   onBidPlaced?: (bid: any) => void
   onItemAdded?: (item: any) => void
 }) {
@@ -115,6 +116,8 @@ export function useAuctionRealtime(roomId: string, callbacks: {
     },
     onUpdate: (payload) => {
       // 게스트 정보 업데이트 (자본, 입찰 상태 등)
+      console.log('[useAuctionRealtime] Guest updated:', payload.new)
+      callbacks.onGuestUpdate?.(payload.new)
     },
     onDelete: (payload) => {
       callbacks.onGuestLeave?.(payload.old)
