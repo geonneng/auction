@@ -178,7 +178,7 @@ export class AuctionAPI {
     })
   }
 
-  async placeBid(roomId: string, nickname: string, amount: number, round: number) {
+  async placeBid(roomId: string, nickname: string, amount: number, round: number, auctionType?: 'fixed' | 'dynamic') {
     return this.makeRequest(this.baseUrl, {
       method: 'POST',
       body: JSON.stringify({
@@ -186,7 +186,8 @@ export class AuctionAPI {
         roomId,
         nickname,
         bidAmount: amount,
-        round
+        round,
+        auctionType: auctionType || 'fixed'
       })
     })
   }

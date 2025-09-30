@@ -20,6 +20,7 @@ import { DataValidator } from "@/lib/data-validation"
 import { GuestLayout } from "@/components/guest-layout"
 import { AuctionItemProvider } from "@/contexts/auction-item-context"
 import { useCurrentRoundItem } from "@/stores/auction-store"
+import { useAuctionRealtime } from "@/hooks/use-supabase-realtime"
 
 export default function DynamicGuestRoom() {
   const params = useParams()
@@ -93,6 +94,90 @@ export default function DynamicGuestRoom() {
     if (storeCurrentRoundItem) setCurrentRoundItem(storeCurrentRoundItem)
   }, [storeCurrentRoundItem])
   const [currentHighestBid, setCurrentHighestBid] = useState<any>(null)
+
+  // Supabase Realtime 구독 - 라운드 상태 변화 실시간 감지
+  useAuctionRealtime(roomId, {
+    onRoomUpdate: (room) => {
+      console.log("[DynamicGuest Realtime] Room updated:", room)
+      
+      // 즉시 게스트 데이터 업데이트
+      if (guestData) {
+        const previousStatus = guestData.status
+        const previousRoundStatus = guestData.roundStatus
+        const previousRound = guestData.currentRound
+        
+        setGuestData(prev => prev ? {
+          ...prev,
+          status: room.status,
+          currentRound: room.current_round,
+          roundStatus: room.round_status
+        } : null)
+        
+        // 라운드 시작 감지
+        if (room.round_status === 'ACTIVE' && previousRoundStatus !== 'ACTIVE') {
+          console.log('[DynamicGuest Realtime] 라운드 시작 감지!')
+          toast({
+            title: "🔥 변동입찰 라운드 시작!",
+            description: `라운드 ${room.current_round}이 시작되었습니다. 실시간으로 입찰하세요!`,
+          })
+          setCanBid(true)
+          setRoundResults(null)
+          loadCurrentRoundItem()
+        } 
+        // 라운드 종료 감지
+        else if (room.round_status !== 'ACTIVE' && previousRoundStatus === 'ACTIVE') {
+          console.log('[DynamicGuest Realtime] 라운드 종료 감지!')
+          toast({
+            title: "라운드 종료",
+            description: `라운드 ${room.current_round}이 종료되었습니다.`,
+          })
+        } 
+        // 라운드 번호 변경 감지
+        else if (room.current_round !== previousRound && room.current_round > previousRound) {
+          console.log('[DynamicGuest Realtime] 라운드 변경 감지!')
+          loadCurrentRoundItem()
+        }
+        
+        // 경매 상태 변화
+        if (room.status === 'ACTIVE' && previousStatus !== 'ACTIVE') {
+          toast({
+            title: "🎯 변동입찰 경매 시작!",
+            description: "변동입찰 경매가 시작되었습니다. 언제든 재입찰할 수 있습니다!",
+          })
+        } else if (room.status === 'ENDED' && previousStatus !== 'ENDED') {
+          toast({
+            title: "경매 종료",
+            description: "경매가 종료되었습니다.",
+          })
+        }
+        
+        // 현재 아이템 변경
+        if (room.current_item) {
+          loadCurrentRoundItem()
+        }
+      }
+    },
+    onGuestJoin: (guest) => {
+      console.log("[DynamicGuest Realtime] Guest joined:", guest)
+    },
+    onGuestLeave: (guest) => {
+      console.log("[DynamicGuest Realtime] Guest left:", guest)
+    },
+    onBidPlaced: (bid) => {
+      console.log("[DynamicGuest Realtime] Bid placed:", bid)
+      // 변동입찰에서는 다른 사람의 입찰 알림이 중요
+      if (bid.nickname !== guestData?.nickname) {
+        toast({
+          title: "🚨 새로운 입찰!",
+          description: `${bid.nickname}님이 ${bid.amount.toLocaleString()}원에 입찰했습니다!`,
+        })
+      }
+    },
+    onItemAdded: (item) => {
+      console.log("[DynamicGuest Realtime] Item added:", item)
+      loadCurrentRoundItem()
+    }
+  })
 
   // Check if room exists on mount and poll for updates
   useEffect(() => {
@@ -281,8 +366,8 @@ export default function DynamicGuestRoom() {
     // Initial check
     checkRoomAndPoll()
     
-    // Poll every 1.5 seconds for faster updates with better balance
-    const interval = createInterval(checkRoomAndPoll, 1500)
+    // Poll every 1 second for backup (Realtime이 주 방법, 폴링은 보조)
+    const interval = createInterval(checkRoomAndPoll, 1000)
 
     return () => {
       isPolling = false
@@ -441,7 +526,7 @@ export default function DynamicGuestRoom() {
     
     try {
       console.log("[Dynamic Guest] Placing bid:", { roomId, nickname: guestData.nickname, amount })
-      const response = await auctionAPI.placeBid(roomId, guestData.nickname, amount, guestData.currentRound || 1)
+      const response = await auctionAPI.placeBid(roomId, guestData.nickname, amount, guestData.currentRound || 1, 'dynamic')
       console.log("[Dynamic Guest] Bid response:", response)
       
       if (response.success) {
@@ -598,9 +683,19 @@ export default function DynamicGuestRoom() {
           {/* Header */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wallet className="h-6 w-6" />
-                변동입찰 경매 참여
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-6 w-6" />
+                  변동입찰 경매 참여
+                </div>
+                {guestData.status === 'ACTIVE' && (
+                  <Badge 
+                    variant={guestData.roundStatus === 'ACTIVE' ? 'default' : 'secondary'}
+                    className="text-base px-4 py-2"
+                  >
+                    {guestData.roundStatus === 'ACTIVE' ? '🔥 라운드 진행 중' : '⏸️ 대기 중'}
+                  </Badge>
+                )}
               </CardTitle>
               <CardDescription>
                 안녕하세요, <strong>{guestData.nickname}</strong>님! 변동입찰 경매에 참여하셨습니다.

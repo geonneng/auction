@@ -95,11 +95,12 @@ export function useAuctionRealtime(roomId: string, callbacks: {
 }) {
   const [roomData, setRoomData] = useState<any>(null)
 
-  // 경매방 변경사항 구독
+  // 경매방 변경사항 구독 - 라운드 상태 변화를 즉시 감지
   useSupabaseRealtime({
     table: 'auction_rooms',
     filter: `id=eq.${roomId}`,
     onUpdate: (payload) => {
+      console.log('[useAuctionRealtime] Room update detected:', payload.new)
       setRoomData(payload.new)
       callbacks.onRoomUpdate?.(payload.new)
     }
@@ -120,11 +121,12 @@ export function useAuctionRealtime(roomId: string, callbacks: {
     }
   })
 
-  // 입찰 변경사항 구독
+  // 입찰 변경사항 구독 - 실시간 입찰 알림
   useSupabaseRealtime({
     table: 'bids',
     filter: `room_id=eq.${roomId}`,
     onInsert: (payload) => {
+      console.log('[useAuctionRealtime] Bid placed detected:', payload.new)
       callbacks.onBidPlaced?.(payload.new)
     }
   })

@@ -87,14 +87,14 @@ export default function GuestRoom() {
     }
   }, [guestData, isConnected, loadCurrentRoundItem])
 
-  // 주기적으로 현재 라운드 아이템 확인 (3초마다 - 더 빠른 업데이트)
+  // 주기적으로 현재 라운드 아이템 확인 (2초마다 - Realtime 보조)
   React.useEffect(() => {
     if (!guestData || !isConnected) return
 
     const interval = setInterval(() => {
       console.log('[Guest] Periodic check for current round item')
       loadCurrentRoundItem()
-    }, 3000)
+    }, 2000)
 
     return () => clearInterval(interval)
   }, [guestData, isConnected, loadCurrentRoundItem])
@@ -123,6 +123,59 @@ export default function GuestRoom() {
   useAuctionRealtime(roomId, {
     onRoomUpdate: (room) => {
       console.log("[Guest] Room updated via Realtime:", room)
+      
+      // 즉시 게스트 데이터 업데이트 (라운드 상태 변화 포함)
+      if (guestData) {
+        const previousStatus = guestData.status
+        const previousRoundStatus = guestData.roundStatus
+        const previousRound = guestData.currentRound
+        
+        setGuestData(prev => prev ? {
+          ...prev,
+          status: room.status,
+          currentRound: room.current_round,
+          roundStatus: room.round_status
+        } : null)
+        
+        // 라운드 상태 변화 감지 및 알림
+        if (room.round_status === 'ACTIVE' && previousRoundStatus !== 'ACTIVE') {
+          console.log('[Guest Realtime] 라운드 시작 감지!')
+          toast({
+            title: "라운드 시작!",
+            description: `라운드 ${room.current_round}이 시작되었습니다. 지금 입찰하세요!`,
+          })
+          setCanBid(true)
+          loadCurrentRoundItem()
+        } else if (room.round_status !== 'ACTIVE' && previousRoundStatus === 'ACTIVE') {
+          console.log('[Guest Realtime] 라운드 종료 감지!')
+          toast({
+            title: "라운드 종료",
+            description: `라운드 ${room.current_round}이 종료되었습니다.`,
+          })
+        } else if (room.current_round !== previousRound) {
+          console.log('[Guest Realtime] 라운드 변경 감지!')
+          loadCurrentRoundItem()
+        }
+        
+        // 경매 시작/종료 감지
+        if (room.status === 'ACTIVE' && previousStatus !== 'ACTIVE') {
+          toast({
+            title: "경매 시작!",
+            description: "경매가 시작되었습니다.",
+          })
+        } else if (room.status === 'ENDED' && previousStatus !== 'ENDED') {
+          toast({
+            title: "경매 종료",
+            description: "경매가 종료되었습니다.",
+          })
+        }
+        
+        // 현재 아이템 변경 감지
+        if (room.current_item) {
+          loadCurrentRoundItem()
+        }
+      }
+      
       setShouldRefresh(prev => prev + 1)
     },
     onGuestJoin: (guest) => {
@@ -144,13 +197,6 @@ export default function GuestRoom() {
     onItemAdded: (item) => {
       console.log("[Guest] Item added via Realtime:", item)
       loadCurrentRoundItem()
-    },
-    onRoomUpdate: (room) => {
-      console.log("[Guest] Room updated via Realtime:", room)
-      // 방 정보가 업데이트되면 현재 라운드 아이템도 다시 로드
-      if (room.current_item) {
-        loadCurrentRoundItem()
-      }
     }
   })
 
@@ -242,8 +288,8 @@ export default function GuestRoom() {
     // 초기 체크
     initialAndBackupPoll()
     
-    // 백업 폴링 (2초마다 - 더 빠른 업데이트)  
-    const interval = createInterval(initialAndBackupPoll, 2000)
+    // 백업 폴링 (1초마다 - Realtime 보조)  
+    const interval = createInterval(initialAndBackupPoll, 1000)
 
     return () => {
       isPolling = false
@@ -314,7 +360,7 @@ export default function GuestRoom() {
     setError("")
 
     try {
-      const response = await auctionAPI.placeBid(roomId, guestData.nickname, amount, guestData.currentRound || 1)
+      const response = await auctionAPI.placeBid(roomId, guestData.nickname, amount, guestData.currentRound || 1, 'fixed')
       if (response.success) {
         toast({
           title: "입찰 완료",
@@ -401,12 +447,24 @@ export default function GuestRoom() {
     <AuctionItemProvider roomId={roomId} guestName={guestData.nickname}>
       <GuestLayout roomId={roomId} guestName={guestData.nickname}>
         <div className="container mx-auto px-4 py-8 space-y-6">
-          {/* 연결 상태 */}
+          {/* 연결 상태 및 라운드 정보 */}
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold">경매 참가</h1>
-            <div className="flex items-center gap-2">
-              <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-              <span className="text-sm">{isConnected ? '연결됨' : '연결 중...'}</span>
+            <div>
+              <h1 className="text-2xl font-bold">경매 참가</h1>
+              {guestData?.status === 'ACTIVE' && (
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant={guestData.roundStatus === 'ACTIVE' ? 'default' : 'secondary'}>
+                    {guestData.roundStatus === 'ACTIVE' ? '🔥 라운드 진행 중' : '⏸️ 라운드 대기'}
+                  </Badge>
+                  <span className="text-sm text-gray-600">라운드 {guestData.currentRound}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+                <span className="text-sm font-medium">{isConnected ? '실시간 연결됨' : '연결 중...'}</span>
+              </div>
             </div>
           </div>
 

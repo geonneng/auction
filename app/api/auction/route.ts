@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    const { action, roomId, nickname, initialCapital, auctionName, item, itemData, guestName, bidAmount, round, newCapital } = await request.json()
+    const { action, roomId, nickname, initialCapital, auctionName, item, itemData, guestName, bidAmount, round, newCapital, auctionType } = await request.json()
     const supabaseAdmin = getSupabaseAdmin()
 
     switch (action) {
@@ -271,11 +271,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ success: false, error: "Guest not found" }, { status: 404 })
         }
 
-        if (guest.capital < bidAmount) {
-          return NextResponse.json({ success: false, error: "Insufficient capital" }, { status: 400 })
-        }
-
-        // 현재 방 상태 및 아이템 가져오기 (아이템은 없어도 허용)
+        // 현재 방 상태 및 아이템 가져오기
         const { data: roomRow } = await supabaseAdmin
           .from('auction_rooms')
           .select('current_item, current_round')
@@ -283,8 +279,38 @@ export async function POST(request: NextRequest) {
           .single()
 
         const effectiveRound = (roomRow?.current_round ?? round ?? 1)
+        const isDynamicAuction = auctionType === 'dynamic'
+        
+        // 변동입찰: 현재 라운드의 이전 입찰 금액 찾기 (환원용)
+        let previousBidAmount = 0
+        if (isDynamicAuction) {
+          const { data: previousBids } = await supabaseAdmin
+            .from('bids')
+            .select('amount')
+            .eq('room_id', roomId)
+            .eq('nickname', nickname)
+            .eq('round', effectiveRound)
+            .order('created_at', { ascending: false })
+            .limit(1)
+          
+          if (previousBids && previousBids.length > 0) {
+            previousBidAmount = previousBids[0].amount
+            console.log(`[Dynamic Auction] Found previous bid: ${previousBidAmount}, will refund`)
+          }
+        }
 
-        // 입찰 추가 (item_id는 null 허용)
+        // 자본 체크: 변동입찰은 (현재 자본 + 이전 입찰 환원) >= 새 입찰
+        const availableCapital = isDynamicAuction ? guest.capital + previousBidAmount : guest.capital
+        if (availableCapital < bidAmount) {
+          return NextResponse.json({ 
+            success: false, 
+            error: isDynamicAuction 
+              ? `자본이 부족합니다. 사용 가능: ${availableCapital.toLocaleString()}원` 
+              : "Insufficient capital" 
+          }, { status: 400 })
+        }
+
+        // 입찰 추가
         const { data: newBid, error: bidError } = await supabaseAdmin
           .from('bids')
           .insert({
@@ -302,16 +328,29 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ success: false, error: "Failed to place bid" }, { status: 500 })
         }
 
-        // 게스트 자본 차감 및 입찰 상태 업데이트
+        // 게스트 자본 업데이트
+        // 변동입찰: 이전 입찰 환원 + 새 입찰 차감 = 순 차감은 (새 입찰 - 이전 입찰)
+        // 고정입찰: 그냥 차감
+        const updatedCapital = isDynamicAuction 
+          ? guest.capital + previousBidAmount - bidAmount
+          : guest.capital - bidAmount
+        
         await supabaseAdmin
           .from('guests')
           .update({
-            capital: guest.capital - bidAmount,
+            capital: updatedCapital,
             has_bid_in_current_round: true
           })
           .eq('id', guest.id)
         
-        return NextResponse.json({ success: true, bid: newBid })
+        console.log(`[Auction] Bid placed - Type: ${auctionType}, Previous: ${previousBidAmount}, New: ${bidAmount}, Capital: ${guest.capital} -> ${updatedCapital}`)
+        
+        return NextResponse.json({ 
+          success: true, 
+          bid: newBid, 
+          remainingCapital: updatedCapital,
+          previousBidAmount: isDynamicAuction ? previousBidAmount : undefined
+        })
 
       case 'getCurrentRoundItem':
         if (!roomId) {
@@ -402,7 +441,7 @@ export async function POST(request: NextRequest) {
         }
 
       case 'modifyCapital':
-        if (!roomId || !nickname || typeof newCapital !== 'number') {
+        if (!roomId || !nickname || newCapital === undefined || typeof newCapital !== 'number') {
           return NextResponse.json({ success: false, error: 'Room ID, nickname and new capital are required' }, { status: 400 })
         }
 
