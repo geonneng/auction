@@ -88,16 +88,18 @@ export function useAuctionRealtime({
   
   const handleBidEvent = useCallback((payload: any) => {
     const bid = payload.new as Bid
-    console.log('[Realtime-New] Bid event received:', {
+    const receivedAt = Date.now()
+    console.log('[Realtime-New] 🚀 Bid event received:', {
       eventType: payload.eventType,
-      bid: bid
+      bid: bid,
+      latency: receivedAt - new Date(bid.created_at || '').getTime()
     })
     
     // INSERT 이벤트 체크 (대소문자 확인)
     if (payload.eventType === 'INSERT') {
-      console.log('[Realtime-New] Calling actions.addBid with:', bid)
+      console.log('[Realtime-New] ⚡ Calling actions.addBid with:', bid)
       actions.addBid(bid)
-      console.log('[Realtime-New] actions.addBid called successfully')
+      console.log('[Realtime-New] ✅ actions.addBid called successfully')
       callbacksRef.current.onBidPlaced?.(bid)
     } else {
       console.warn('[Realtime-New] Bid event is not INSERT, eventType:', payload.eventType)
@@ -133,7 +135,12 @@ export function useAuctionRealtime({
     // 새 채널 생성
     console.log('[Realtime-New] Creating new channel for room:', roomId)
     const channel = supabase
-      .channel(`auction_room_${roomId}_${Date.now()}`)
+      .channel(`auction_room_${roomId}_${Date.now()}`, {
+        config: {
+          broadcast: { self: true },  // 자신이 보낸 이벤트도 수신
+          presence: { key: '' },
+        }
+      })
       
       // 경매방 업데이트 구독
       .on(

@@ -16,7 +16,7 @@ export function getSupabase(): SupabaseClient {
   cachedAnonClient = createClient(supabaseUrl, supabaseAnonKey, {
     realtime: {
       params: {
-        eventsPerSecond: 10
+        eventsPerSecond: 50  // 초당 이벤트 수 증가 (10 → 50)
       }
     },
     auth: {
@@ -24,6 +24,8 @@ export function getSupabase(): SupabaseClient {
       autoRefreshToken: false
     }
   })
+  
+  console.log('[Supabase] Anon client created with enhanced realtime config')
   return cachedAnonClient
 }
 
