@@ -27,6 +27,15 @@ export function RoundStatus({ auctionType = 'fixed' }: RoundStatusProps) {
   const [isRegistering, setIsRegistering] = React.useState(false)
   const [showItemSelectDialog, setShowItemSelectDialog] = React.useState(false)
   
+  // 디버깅: currentRoundBids 상태 로깅
+  React.useEffect(() => {
+    console.log('[RoundStatus] Current round bids updated:', {
+      count: currentRoundBids.length,
+      currentRound: room?.current_round,
+      bids: currentRoundBids.map(b => ({ nickname: b.nickname, amount: b.amount, round: b.round }))
+    })
+  }, [currentRoundBids, room?.current_round])
+  
   if (!room) return null
   // WAITING 상태에서 방의 아이템 목록 로드 (게스트 등록물 동기화)
   React.useEffect(() => {
@@ -274,7 +283,12 @@ export function RoundStatus({ auctionType = 'fixed' }: RoundStatusProps) {
             <div className="space-y-2 max-h-40 overflow-y-auto">
               {currentRoundBids
                 .slice()
-                .sort((a, b) => b.amount - a.amount)
+                .sort((a, b) => {
+                  // 금액 순으로 정렬 (내림차순)
+                  if (b.amount !== a.amount) return b.amount - a.amount
+                  // 동일 금액이면 먼저 제출한 순 (created_at 오름차순)
+                  return new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime()
+                })
                 .map((bid, index) => (
                   <div key={bid.id || index} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded">
                     <div className="flex items-center gap-2">
@@ -308,7 +322,12 @@ export function RoundStatus({ auctionType = 'fixed' }: RoundStatusProps) {
               <div className="space-y-2">
                 {currentRoundBids
                   .slice()
-                  .sort((a, b) => b.amount - a.amount)
+                  .sort((a, b) => {
+                    // 금액 순으로 정렬 (내림차순)
+                    if (b.amount !== a.amount) return b.amount - a.amount
+                    // 동일 금액이면 먼저 제출한 순 (created_at 오름차순)
+                    return new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime()
+                  })
                   .map((bid, index) => (
                     <div key={bid.id || `${bid.nickname}-${index}`} className="flex items-center justify-between py-2 px-3 bg-emerald-50 rounded border border-emerald-100">
                       <div className="flex items-center gap-2">

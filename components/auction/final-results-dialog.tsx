@@ -68,8 +68,14 @@ export function FinalResultsDialog({
         
         if (guestBid) {
           // 해당 라운드에서 이 참가자가 최고가인지 확인
+          // 동일 금액일 경우 먼저 제출한 사람이 낙찰 (created_at 기준)
           const maxBid = Math.max(...roundBids.map(bid => bid.amount))
-          if (guestBid.amount === maxBid) {
+          const winnersWithMaxBid = roundBids.filter(bid => bid.amount === maxBid)
+          const winner = winnersWithMaxBid.sort((a, b) => 
+            new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime()
+          )[0]
+          
+          if (winner && winner.guest_id === guest.id) {
             wonRounds++
             totalSpent += guestBid.amount
             wonRoundNumbers.push(round)

@@ -302,12 +302,14 @@ export async function POST(request: NextRequest) {
         
         if (isDynamicAuction) {
           // 현재 라운드의 모든 입찰 중 최고 입찰 찾기
+          // 동일 금액일 경우 먼저 제출한 사람이 우선 (created_at 오름차순)
           const { data: allRoundBids } = await supabaseAdmin
             .from('bids')
             .select('*, guest_id')
             .eq('room_id', roomId)
             .eq('round', effectiveRound)
             .order('amount', { ascending: false })
+            .order('created_at', { ascending: true })
             .limit(1)
           
           if (allRoundBids && allRoundBids.length > 0) {
@@ -459,12 +461,14 @@ export async function POST(request: NextRequest) {
           const currentRound = roomData.current_round
           
           // 현재 라운드의 모든 입찰 가져오기 (낙찰자 확인용)
+          // 동일 금액일 경우 먼저 제출한 사람이 낙찰받도록 created_at으로 2차 정렬
           const { data: roundBids, error: bidsError } = await supabaseAdmin
             .from('bids')
             .select('*')
             .eq('room_id', roomId)
             .eq('round', currentRound)
             .order('amount', { ascending: false })
+            .order('created_at', { ascending: true })
           
           if (bidsError) {
             console.error('[endRound] Failed to fetch bids:', bidsError)
