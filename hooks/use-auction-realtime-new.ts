@@ -47,7 +47,7 @@ export function useAuctionRealtime({
   // 이벤트 핸들러들
   const handleRoomUpdate = useCallback((payload: any) => {
     const room = payload.new as AuctionRoom
-    console.log('[Realtime] Room updated:', room)
+    console.log('[Realtime-New] Room updated:', room)
     
     actions.updateRoom(room)
     callbacksRef.current.onRoomUpdate?.(room)
@@ -55,7 +55,7 @@ export function useAuctionRealtime({
   
   const handleGuestEvent = useCallback((payload: any) => {
     const guest = payload.new as Guest
-    console.log(`[Realtime] Guest ${payload.eventType}:`, guest)
+    console.log(`[Realtime-New] Guest ${payload.eventType}:`, guest)
     
     switch (payload.eventType) {
       case 'INSERT':
@@ -74,25 +74,25 @@ export function useAuctionRealtime({
   
   const handleBidEvent = useCallback((payload: any) => {
     const bid = payload.new as Bid
-    console.log('[Realtime] Bid event received:', {
+    console.log('[Realtime-New] Bid event received:', {
       eventType: payload.eventType,
       bid: bid
     })
     
     // INSERT 이벤트 체크 (대소문자 확인)
     if (payload.eventType === 'INSERT') {
-      console.log('[Realtime] Calling actions.addBid with:', bid)
+      console.log('[Realtime-New] Calling actions.addBid with:', bid)
       actions.addBid(bid)
-      console.log('[Realtime] actions.addBid called successfully')
+      console.log('[Realtime-New] actions.addBid called successfully')
       callbacksRef.current.onBidPlaced?.(bid)
     } else {
-      console.warn('[Realtime] Bid event is not INSERT, eventType:', payload.eventType)
+      console.warn('[Realtime-New] Bid event is not INSERT, eventType:', payload.eventType)
     }
   }, [actions])
   
   const handleItemEvent = useCallback((payload: any) => {
     const item = payload.new as AuctionItem
-    console.log('[Realtime] Item added:', item)
+    console.log('[Realtime-New] Item added:', item)
     
     if (payload.eventType === 'INSERT') {
       actions.addItem(item)
@@ -102,18 +102,24 @@ export function useAuctionRealtime({
   
   // 채널 초기화 및 구독
   useEffect(() => {
-    if (!enabled || !roomId) return
+    if (!enabled || !roomId) {
+      console.log('[Realtime-New] Skipping subscription:', { enabled, roomId })
+      return
+    }
     
+    console.log('[Realtime-New] Initializing subscription for room:', roomId)
     const supabase = getSupabase()
     
     // 이전 채널 정리
     if (channelRef.current) {
+      console.log('[Realtime-New] Unsubscribing from previous channel')
       channelRef.current.unsubscribe()
     }
     
     // 새 채널 생성
+    console.log('[Realtime-New] Creating new channel for room:', roomId)
     const channel = supabase
-      .channel(`auction_room_${roomId}`)
+      .channel(`auction_room_${roomId}_${Date.now()}`)
       
       // 경매방 업데이트 구독
       .on(
@@ -149,7 +155,7 @@ export function useAuctionRealtime({
           filter: `room_id=eq.${roomId}`
         },
         (payload) => {
-          console.log('[Realtime] Bids table event:', payload.eventType, payload)
+          console.log('[Realtime-New] 🎯 Bids table event:', payload.eventType, payload)
           handleBidEvent(payload)
         }
       )
@@ -167,7 +173,12 @@ export function useAuctionRealtime({
       )
       
       .subscribe((status) => {
-        console.log(`[Realtime] Subscription status for room ${roomId}:`, status)
+        console.log(`[Realtime-New] Subscription status for room ${roomId}:`, status)
+        if (status === 'SUBSCRIBED') {
+          console.log('[Realtime-New] ✅ Successfully subscribed to all channels')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('[Realtime-New] ❌ Channel error')
+        }
         actions.setConnected(status === 'SUBSCRIBED')
       })
     

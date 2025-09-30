@@ -68,9 +68,10 @@ export function HostDashboard({ roomId, auctionType }: HostDashboardProps) {
   
   // 초기 데이터 로드
   useEffect(() => {
+    console.log('[HostDashboard] Initial load:', { roomId, auctionType })
     actions.setAuctionType(auctionType)
     actions.syncWithServer(roomId)
-  }, [roomId, auctionType]) // actions 제거
+  }, [roomId, auctionType, actions])
   
   // 실시간 업데이트
   const { isConnected, lastUpdated } = useAuctionRealtime({
