@@ -101,7 +101,7 @@ export function useAuctionRealtime(roomId: string, callbacks: {
     table: 'auction_rooms',
     filter: `id=eq.${roomId}`,
     onUpdate: (payload) => {
-      console.log('[useAuctionRealtime] Room update detected:', payload.new)
+      console.log('[Realtime-Old] Room update detected:', payload.new)
       setRoomData(payload.new)
       callbacks.onRoomUpdate?.(payload.new)
     }
@@ -116,7 +116,7 @@ export function useAuctionRealtime(roomId: string, callbacks: {
     },
     onUpdate: (payload) => {
       // 게스트 정보 업데이트 (자본, 입찰 상태 등)
-      console.log('[useAuctionRealtime] Guest updated:', payload.new)
+      console.log('[Realtime-Old] Guest updated:', payload.new)
       callbacks.onGuestUpdate?.(payload.new)
     },
     onDelete: (payload) => {
@@ -129,7 +129,7 @@ export function useAuctionRealtime(roomId: string, callbacks: {
     table: 'bids',
     filter: `room_id=eq.${roomId}`,
     onInsert: (payload) => {
-      console.log('[useAuctionRealtime] Bid placed detected:', payload.new)
+      console.log('[Realtime-Old] Bid placed detected:', payload.new)
       callbacks.onBidPlaced?.(payload.new)
     }
   })
