@@ -51,7 +51,7 @@ export function useAuctionRealtime({
     
     actions.updateRoom(room)
     callbacksRef.current.onRoomUpdate?.(room)
-  }, []) // actions 제거
+  }, [actions])
   
   const handleGuestEvent = useCallback((payload: any) => {
     const guest = payload.new as Guest
@@ -70,17 +70,19 @@ export function useAuctionRealtime({
         callbacksRef.current.onGuestLeave?.(guest)
         break
     }
-  }, []) // actions 제거
+  }, [actions])
   
   const handleBidEvent = useCallback((payload: any) => {
     const bid = payload.new as Bid
     console.log('[Realtime] Bid placed:', bid)
     
     if (payload.eventType === 'INSERT') {
+      console.log('[Realtime] Calling actions.addBid with:', bid)
       actions.addBid(bid)
+      console.log('[Realtime] actions.addBid called successfully')
       callbacksRef.current.onBidPlaced?.(bid)
     }
-  }, []) // actions 제거
+  }, [actions])
   
   const handleItemEvent = useCallback((payload: any) => {
     const item = payload.new as AuctionItem
@@ -90,7 +92,7 @@ export function useAuctionRealtime({
       actions.addItem(item)
       callbacksRef.current.onItemAdded?.(item)
     }
-  }, []) // actions 제거 - actions는 Zustand에서 안정적으로 제공됨
+  }, [actions])
   
   // 채널 초기화 및 구독
   useEffect(() => {
